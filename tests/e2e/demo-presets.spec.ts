@@ -1,0 +1,31 @@
+import {test,expect} from '@playwright/test';
+import {demoPresetData} from '../../src/features/home/demo-preset-data';
+test('首页四套演示只填入需求，资料及 Skill 可真实读取且不会重复添加',async({page})=>{
+ await page.route('**/api/ai/config',route=>route.fulfill({json:{configured:false,models:[]}}));
+ let chatRequests=0;await page.route('**/api/ai/chat',route=>{chatRequests++;return route.fulfill({status:503,json:{error:'No generation should be requested'}})});
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();
+ await expect(page.getByRole('heading',{name:'您想创建什么？'})).toBeVisible();
+ const input=page.getByRole('textbox',{name:'创作需求',exact:true});await input.fill('保留客户输入，不要自动发送。');
+ const snapshot=()=>page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state;return {draft:state.drafts.find((d:{id:string})=>d.id===state.activeDraftId),skills:state.skills,assets:state.assets,runs:state.runs};});
+ await page.getByLabel('添加文件',{exact:true}).setInputFiles({name:'客户原始说明.txt',mimeType:'text/plain',buffer:Buffer.from('这是用户已经上传的客户资料，请保留。')});await expect(page.getByText('客户原始说明.txt',{exact:true})).toBeVisible();
+ const before=await snapshot();
+ for(const preset of demoPresetData)await expect(page.getByRole('button',{name:preset.title,exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'金融论坛短片',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'企业智能演示',exact:true}).click();
+ await expect(input).toHaveValue(`保留客户输入，不要自动发送。\n\n${demoPresetData[1].prompt}`);
+ await page.getByRole('button',{name:'添加示例资料',exact:true}).click();
+ await expect(page.getByRole('button',{name:'添加示例资料',exact:true})).toBeEnabled();
+ await expect(page.locator('.attachment-folder')).toHaveCount(1);
+ await page.locator('.attachment-folder summary').first().click();
+ await expect(page.getByText('星澜智造_智能演示大纲.pptx',{exact:true})).toBeVisible();
+ const added=await snapshot();expect(added.draft.attachmentIds).toHaveLength(8);expect(added.draft.attachmentIds).toContain(before.draft.attachmentIds[0]);
+ expect(added.draft.model).toBe(before.draft.model);expect(added.draft.styleId).toBe(before.draft.styleId);expect(added.draft.skillIds).toEqual(before.draft.skillIds);expect(added.runs).toEqual(before.runs);
+ expect(added.skills.filter((s:{name:string;personal:boolean})=>s.name==='企业智能演示编排'&&s.personal)).toHaveLength(1);
+ await page.getByRole('button',{name:'添加示例资料',exact:true}).click();await expect(page.getByRole('button',{name:'添加示例资料',exact:true})).toBeEnabled();
+ const repeated=await snapshot();expect(repeated.draft.attachmentIds).toEqual(added.draft.attachmentIds);expect(repeated.skills).toEqual(added.skills);
+ await page.getByRole('button',{name:'企业智能演示',exact:true}).click();await expect(input).toHaveValue(added.draft.text);expect(chatRequests).toBe(0);
+ for(const preset of demoPresetData){for(const file of [...preset.files,preset.skill]){const response=await page.request.get(file.url);expect(response.ok(),file.url).toBe(true);expect((await response.body()).length).toBeGreaterThan(0);}}
+ await expect(page.locator('.toast')).toHaveCount(0,{timeout:10000});
+ await page.screenshot({path:'output/验收截图/home-demo-presets.png',fullPage:true});
+ await page.setViewportSize({width:1024,height:768});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

@@ -1,0 +1,45 @@
+import {expect,test} from '@playwright/test';
+
+test('参考选择展示真实画面，支持多页预览、试运行和保留引用范围',async({page},testInfo)=>{
+ await page.route('**/api/ai/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({models:[],configured:{}})}));
+ await page.goto('/#/login');
+ await page.getByRole('button',{name:'填入',exact:true}).click();
+ await page.getByRole('button',{name:'进入工作台',exact:true}).click();
+ await expect(page.getByLabel('创作需求',{exact:true})).toBeVisible();
+ await page.evaluate(()=>{
+  const data=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!);
+  const original=data.state.works.find((work:any)=>work.id==='work-1');
+  const second=structuredClone(original.pages[0]);second.id='reference-page-two';second.name='第二展示页';
+  second.nodes=second.nodes.map((node:any)=>({...node,id:`second-${node.id}`}));
+  data.state.works=data.state.works.map((work:any)=>work.id===original.id?{...work,title:'多页企业参考',pages:[work.pages[0],second]}:work);
+  localStorage.setItem('zhichuang-studio-v1',JSON.stringify(data));
+ });
+ await page.reload();
+ await page.getByRole('button',{name:'创作参考',exact:true}).click();
+ const picker=page.getByRole('dialog',{name:'添加参考展项',exact:true});
+ const card=picker.locator('[data-reference-source="work:work-1"]');
+ await expect(card.locator('.scene-renderer')).toBeVisible();
+ await expect(card).toContainText('当前空间 · 交互页面 · 2 页');
+ expect((await card.boundingBox())!.height).toBeGreaterThan(180);
+ await page.screenshot({animations:'disabled',path:testInfo.outputPath('reference-cards.png')});
+ await card.getByRole('button',{name:'预览参考 多页企业参考',exact:true}).click();
+ const preview=page.getByRole('dialog',{name:'展项预览 · 多页企业参考',exact:true});
+ await preview.getByRole('button',{name:'2 · 第二展示页',exact:true}).click();
+ await expect(preview.getByRole('button',{name:'2 · 第二展示页',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.screenshot({animations:'disabled',path:testInfo.outputPath('reference-large.png')});
+ await preview.getByRole('button',{name:'试运行',exact:true}).click();
+ await expect(preview.getByRole('button',{name:'停止试运行',exact:true})).toBeVisible();
+ await preview.getByRole('button',{name:'全屏',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>Boolean(document.fullscreenElement))).toBe(true);
+ await preview.getByRole('button',{name:'退出全屏',exact:true}).click();
+ await preview.getByRole('button',{name:'选择此展项',exact:true}).click();
+ await expect(card.locator('.reference-source-select')).toHaveAttribute('aria-pressed','true');
+ await picker.getByPlaceholder('搜索参考展项').fill('不存在的其他展项');
+ await expect(card).toBeVisible();
+ await picker.getByLabel('参考范围',{exact:true}).selectOption('page:reference-page-two');
+ await picker.getByRole('checkbox',{name:'UI 风格',exact:true}).check();
+ await picker.getByRole('button',{name:'加入参考',exact:true}).click();
+ await expect(page.getByTestId('exhibit-reference-summary')).toContainText('多页企业参考');
+ const refs=await page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state;return state.drafts.find((draft:any)=>draft.id===state.activeDraftId).references;});
+ expect(refs).toHaveLength(2);expect(refs.every((ref:any)=>ref.scope==='page:reference-page-two')).toBe(true);
+});

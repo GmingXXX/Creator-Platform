@@ -1,0 +1,74 @@
+{
+  "name": "智创平台",
+  "decisions": [
+    {
+      "date": "2026-11-06",
+      "direction": "采用用户确认的 V1.1：浅色创作工作台，深色主按钮、蓝色焦点、240px 可折叠侧栏，首页无顶部栏；展项内容以大图和实际场景呈现。",
+      "palette": {
+        "background": "#fafafa",
+        "surface": "#ffffff",
+        "text": "#18181b",
+        "muted": "#52525b",
+        "border": "#e4e4e7",
+        "focus": "#2563eb"
+      },
+      "type": "系统中文无衬线，正文14px，标题28–40px",
+      "radii": {
+        "control": 8,
+        "card": 12,
+        "dialog": 16
+      }
+    },
+    {
+      "date": "2026-11-11",
+      "direction": "V1.5沿用克制浅色工作台。首页采用文字提示胶囊与刷新、下方最佳模板网格；回形针与麦克风保持图标入口，录音态变为胶囊波形条。社区仅项目类型平铺，用途及展示形式下拉；Skills来源为筛选维度。个人资源跨空间可用，项目共享副本独立保存。",
+      "reason": "用户最新明确批准，覆盖早期首页不显示模板的约定。"
+    },
+    {
+      "date": "2026-11-19",
+      "direction": "工作台每种模式使用统一纯色底。侧栏、首页创作区和作品区同色；控件通过细银边和短促过渡呈现透明玻璃质感。折叠 Z 在首页首次显现时有玻璃折射，侧栏使用静态标志。",
+      "palette": { "lightBackground": "#fafafa", "darkBackground": "#141414" },
+      "layout": "沿用现有作品和模板卡片尺寸、网格和间距，保留作品自身的色彩。"
+    },
+    {
+      "date": "2026-11-20",
+      "direction": "面向真实日常创作者的 A+B 融合规范（精工画廊底座 + 轻液态玻璃与 motion 微交互点睛）：以极简低疲劳的克制工作台为底，在统一底色上引入 2%–3% 微弱表面阶梯（侧栏略退后、输入器与浮层轻抬升）与低对比度柔化边界；焦点色与玻璃高光统一收敛为中性精工色系；全站最小可读字号抬升至 12px，交互热区不小于 32px；核心焦点控件（输入器聚焦光晕、轮播提示、语音态上下文保留、模板卡片无遮罩轻抬升、侧栏弹簧指示条、RunPage 流式进度与平滑入场）启用 motion 弹簧微动效，并严格支持 prefers-reduced-motion 与明暗双模式。",
+      "positioning": "面向创作者日常高频使用的 AI 时代内容生产平台（非展厅大屏展示型原型）。",
+      "palette": {
+        "light": {
+          "canvas": "#fafafa",
+          "sidebar": "#f5f5f4",
+          "surface": "#ffffff",
+          "surfaceSubtle": "#f4f4f3",
+          "text": "#18181b",
+          "muted": "#66666e",
+          "border": "rgba(24, 24, 27, 0.09)",
+          "borderStrong": "rgba(24, 24, 27, 0.16)",
+          "focus": "#3f3f46"
+        },
+        "dark": {
+          "canvas": "#141414",
+          "sidebar": "#111111",
+          "surface": "#1c1c1e",
+          "surfaceSubtle": "#222225",
+          "text": "#ededed",
+          "muted": "#a1a1aa",
+          "border": "rgba(255, 255, 255, 0.09)",
+          "borderStrong": "rgba(255, 255, 255, 0.18)",
+          "focus": "#d4d4d8"
+        }
+      },
+      "typography": {
+        "minReadableSize": "12px",
+        "body": "14px",
+        "numeric": "tabular-nums"
+      },
+      "motion": {
+        "library": "motion/react",
+        "springSnappy": { "stiffness": 420, "damping": 34, "mass": 0.7 },
+        "springGentle": { "stiffness": 280, "damping": 28 },
+        "reducedMotion": "respect prefers-reduced-motion"
+      }
+    }
+  ]
+}

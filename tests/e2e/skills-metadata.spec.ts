@@ -1,0 +1,55 @@
+import {test,expect} from '@playwright/test';
+import {reloadAndReopen} from './reload-helpers';
+import JSZip from 'jszip';
+import {readFile} from 'node:fs/promises';
+
+test('统一技能库新建完整元信息，刷新保留并导出当前定义',async({page},testInfo)=>{
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台',exact:true}).click();await expect(page.getByLabel('创作需求',{exact:true})).toBeVisible();
+ await page.goto('/#/skills');await page.getByRole('button',{name:'新建技能',exact:true}).click();
+ const form=page.getByRole('dialog',{name:'新建技能',exact:true});
+ await expect(form.getByLabel('唯一标识',{exact:true})).toHaveAttribute('readonly','');
+ await form.getByLabel('名称',{exact:true}).fill('跨项目时间轴方法');
+ await form.getByLabel('技能说明',{exact:true}).fill('根据已确认事件制作完整时间轴展项。');
+ await form.getByLabel('标签',{exact:true}).fill('时间轴, 展项');
+ await form.getByLabel('用途说明',{exact:true}).fill('把已确认的客户事件组织成可浏览展项');
+ await form.getByLabel('适用场景',{exact:true}).fill('企业展厅横屏时间轴');
+ await form.getByLabel('需要提供',{exact:true}).fill('经过核验的年份、事件和图片');
+ await form.getByLabel('技能执行步骤',{exact:true}).fill('核对年份\n组织事件\n检查浏览行为');
+ await form.getByLabel('预期输出',{exact:true}).fill('可编辑完整时间轴');
+ await form.getByLabel('检查标准',{exact:true}).fill('年份与事件一致\n每个详情可返回');
+ await form.getByText('依赖与权限',{exact:true}).click();
+ await form.getByLabel('外部工具或服务',{exact:true}).fill('知识检索服务');
+ await form.getByLabel('访问的数据或资源',{exact:true}).fill('当前项目明确选用的知识资料');
+ await form.getByLabel('读写操作',{exact:true}).selectOption('read');
+ await form.getByLabel('用户授权要求',{exact:true}).selectOption('required');
+ await form.getByRole('button',{name:'保存 Skill 草稿',exact:true}).click();
+ await expect(form).toHaveCount(0);await reloadAndReopen(page);
+ await page.getByRole('button',{name:'查看跨项目时间轴方法',exact:true}).click();
+ const detail=page.getByRole('dialog',{name:'跨项目时间轴方法',exact:true});
+ await expect(detail).toContainText('知识检索服务');await expect(detail).toContainText('需要用户授权');
+ await expect(detail.getByRole('button',{name:'启用技能',exact:true})).toBeVisible();
+ const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.skills.find((s:any)=>s.name==='跨项目时间轴方法'));
+ expect(before.metadata.tags).toEqual(['时间轴','展项']);expect(before.metadata.visibility).toBe('private');expect(before.enabled).toBe(false);
+ await detail.getByRole('button',{name:'编辑技能信息',exact:true}).click();
+ const edit=page.getByRole('dialog',{name:'编辑技能信息',exact:true});await edit.getByLabel('版本',{exact:true}).fill('0.2.0');await edit.getByLabel('预期输出',{exact:true}).fill('可编辑且有检查记录的完整时间轴');await edit.getByRole('button',{name:'保存修改',exact:true}).click();
+ const downloadPromise=page.waitForEvent('download');await detail.getByRole('button',{name:'导出当前技能包',exact:true}).click();const download=await downloadPromise;
+ const path=testInfo.outputPath('current-skill.zip');await download.saveAs(path);const zip=await JSZip.loadAsync(await readFile(path));
+ const manifest=Object.values(zip.files).find(file=>file.name.endsWith('skill.json'))!;const data=JSON.parse(await manifest.async('string'));
+ expect(JSON.stringify(data)).toContain('可编辑且有检查记录的完整时间轴');expect(JSON.stringify(data)).toContain('0.2.0');
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.skills.find((s:any)=>s.name==='跨项目时间轴方法'));
+ expect(saved.id).toBe(before.id);expect(saved.sourcePackage.instructions).toContain('可编辑且有检查记录的完整时间轴');
+});
+
+test('其他账号已采用社区技能，不阻止当前账号添加自己的版本',async({page})=>{
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台',exact:true}).click();await expect(page.getByLabel('创作需求',{exact:true})).toBeVisible();
+ await page.goto('/#/community?tab=skills');
+ const source=await page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state;return state.skills.find((skill:any)=>skill.public&&!state.skills.some((item:any)=>item.origin?.skillId===skill.id));});
+ await page.getByRole('button',{name:`查看${source.name}`,exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'添加技能',exact:true}).click();await expect(page.getByRole('dialog').getByRole('button',{name:'已添加',exact:true})).toBeDisabled();
+ await page.evaluate(id=>{const stored=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!);stored.state.skills=stored.state.skills.map((skill:any)=>skill.origin?.skillId===id?{...skill,metadata:{...skill.metadata,ownerAccount:'other-account'}}:skill);localStorage.setItem('zhichuang-studio-v1',JSON.stringify(stored));},source.id);
+ await reloadAndReopen(page);
+ if(!(await page.getByRole('dialog').count()))await page.getByRole('button',{name:`查看${source.name}`,exact:true}).click();
+ await expect(page.getByRole('dialog').getByRole('button',{name:'添加技能',exact:true})).toBeEnabled();await page.getByRole('dialog').getByRole('button',{name:'添加技能',exact:true}).click();
+ await expect(page.getByRole('dialog').getByRole('button',{name:'已添加',exact:true})).toBeDisabled();
+ const copies=await page.evaluate(id=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.skills.filter((skill:any)=>skill.origin?.skillId===id),source.id);
+ expect(copies).toHaveLength(2);expect(copies.map((skill:any)=>skill.metadata.ownerAccount).sort()).toEqual(['jiming','other-account']);
+});

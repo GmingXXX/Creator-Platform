@@ -1,0 +1,4 @@
+import { defineConfig } from '@playwright/test';
+import { existsSync } from 'node:fs';
+const installedBrowser='/Users/ming/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell';
+export default defineConfig({testDir:'./tests/e2e',fullyParallel:false,workers:1,timeout:60000,expect:{timeout:10000},use:{baseURL:process.env.PLAYWRIGHT_BASE_URL||'http://127.0.0.1:5173',headless:true,viewport:{width:1440,height:960},launchOptions:{executablePath:process.env.PLAYWRIGHT_CHROMIUM_PATH||(existsSync(installedBrowser)?installedBrowser:undefined)},screenshot:'only-on-failure',trace:'retain-on-failure'},reporter:[['list'],['json',{outputFile:'output/e2e-results.json'}],['html',{open:'never',outputFolder:'output/e2e-report'}]],webServer:process.env.PLAYWRIGHT_BASE_URL?undefined:{command:'npm run dev',url:'http://127.0.0.1:5173',reuseExistingServer:true}});

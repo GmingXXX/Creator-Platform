@@ -1,0 +1,12 @@
+import {useState} from 'react';
+import type {SceneNode} from '../../domain/types';
+import {fontOptions,wholeTextPatch} from '../../domain/text-style';
+import {Field} from './StudioShared';
+export function PresentationTextProperties({node:source,onChange:change}:{node:SceneNode;onChange:(patch:Partial<SceneNode>)=>void}){
+ const [scope,setScope]=useState<'all'|'titleStyle'|'bodyStyle'>('all');
+ const active=source.items?.length?scope:'all';
+ const node=active==='all'?source:{...source,...source[active]};
+ const onChange=(patch:Partial<SceneNode>)=>change(active==='all'?wholeTextPatch(source,patch):{[active]:{...source[active],...patch}});
+ const options=node.fontFamily&&!fontOptions.some(font=>font.value===node.fontFamily)?[...fontOptions,{label:`风格字体 · ${node.fontFamily}`,value:node.fontFamily}]:fontOptions;
+ return <section className="presentation-text-properties"><h4>文字样式</h4>{!!source.items?.length&&<Field label="文字范围"><select value={scope} onChange={e=>setScope(e.target.value as typeof scope)}><option value="all">整体文字</option><option value="titleStyle">标题文字</option><option value="bodyStyle">正文文字</option></select></Field>}<Field label="字体"><select value={node.fontFamily||''} onChange={e=>onChange({fontFamily:e.target.value})}>{options.map(font=><option key={font.value} value={font.value}>{font.label}</option>)}</select></Field><div className="studio-form-row"><Field label="字号"><input type="number" min={8} max={500} value={node.fontSize} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))onChange({fontSize:Math.max(8,Math.min(500,value))})}}/></Field><Field label="字重"><select value={node.fontWeight||500} onChange={e=>onChange({fontWeight:Number(e.target.value)})}><option value={400}>常规</option><option value={500}>中等</option><option value={600}>半粗</option><option value={700}>加粗</option></select></Field></div><div className="studio-form-row"><Field label="文字颜色"><input type="color" value={node.color} onChange={e=>onChange({color:e.target.value})}/></Field><Field label="对齐"><select value={node.textAlign||'left'} onChange={e=>onChange({textAlign:e.target.value as SceneNode['textAlign']})}><option value="left">左对齐</option><option value="center">居中</option><option value="right">右对齐</option><option value="justify">两端对齐</option></select></Field></div><Field label="行距"><input type="number" min={.8} max={4} step={.1} value={node.lineHeight??1.4} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))onChange({lineHeight:Math.max(.8,Math.min(4,value))})}}/></Field></section>;
+}

@@ -1,0 +1,22 @@
+.preview-fullscreen-surface:fullscreen{width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;box-sizing:border-box;background:#111722;color:#edf3fb;overflow:auto;}
+.preview-fullscreen-surface::backdrop{background:#111722}
+.runtime-page:fullscreen>.runtime-material-stage,.runtime-page:fullscreen>.runtime-story-stage{width:min(1500px,100%)}
+.res-material-preview:fullscreen{display:flex;flex-direction:column;align-items:center;padding:16px;gap:12px;overflow:hidden}
+.res-material-preview:fullscreen>.res-runtime-preview,.res-material-preview:fullscreen>.res-material-shot{flex:1;min-height:0;width:100%;aspect-ratio:auto!important;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.res-material-preview:fullscreen>.res-material-shot>img,.res-material-preview:fullscreen>.res-material-shot>video{max-height:100%;object-fit:contain}
+.res-material-preview:fullscreen>.res-page-strip,.res-material-preview:fullscreen>.res-material-controls{flex-shrink:0;width:100%;color:inherit}
+.res-material-preview:fullscreen .res-material-note{display:none}
+.preview-fullscreen-toolbar{display:flex;justify-content:flex-end;gap:8px;width:100%;flex-shrink:0}
+.story-experience:fullscreen{display:flex;flex-direction:column;padding:16px;gap:12px;overflow:hidden}
+.story-experience:fullscreen>.story-preview-scene{flex:1;min-height:0;aspect-ratio:auto!important}
+.story-experience:fullscreen>.story-preview-scene>img,.story-experience:fullscreen>.story-preview-scene>video{object-fit:contain}
+.story-preview-config>.btn:last-child{margin-left:auto}
+.preview-fullscreen-surface:fullscreen .story-preview-footer{color:inherit;flex-shrink:0}
+.preview-fullscreen-surface:fullscreen .story-preview-config{flex-shrink:0}
+
+.video-trial-fullscreen:fullscreen{display:flex;flex-direction:column;gap:12px;padding:16px;overflow:hidden}
+.video-trial-fullscreen:fullscreen>.video-sequence-preview{flex:1;min-height:0;aspect-ratio:auto!important}
+.video-trial-fullscreen:fullscreen>.video-sequence-preview img,.video-trial-fullscreen:fullscreen>.video-sequence-preview video{object-fit:contain;height:100%}
+.video-trial-fullscreen:fullscreen>.video-play-controls{flex-shrink:0}
+
+.runtime-page:fullscreen>header,.runtime-overlay:fullscreen>header{color:var(--text,#18181b)}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "name": "浮光 · 3D 成果卡片",
+  "description": "基于21st真实组件源码适配，支持参数编辑和独立运行。",
+  "entry": "index.html",
+  "bridge": "zhichuang-component-v1",
+  "fields": [
+    {
+      "key": "title",
+      "label": "卡片标题",
+      "type": "text",
+      "default": "让每一次创新，都被看见"
+    },
+    {
+      "key": "description",
+      "label": "内容说明",
+      "type": "textarea",
+      "default": "从设备感知到数字孪生，让复杂技术成为可以触摸的体验。"
+    },
+    {
+      "key": "accent",
+      "label": "主题色",
+      "type": "color",
+      "default": "#17675d"
+    },
+    {
+      "key": "imageUrl",
+      "label": "图片地址（留空沿用示意图）",
+      "type": "text",
+      "default": ""
+    },
+    {
+      "key": "motion",
+      "label": "开启悬浮动效",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "key": "detail",
+      "label": "详情内容",
+      "type": "textarea",
+      "default": "将复杂技术转化为清晰的视觉表达。\n\n这是一份虚构成果示例，可修改标题、说明、图片与主题色。"
+    }
+  ]
+}

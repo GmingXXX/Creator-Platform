@@ -1,0 +1,32 @@
+.creation-review{padding:26px;background:#fff;border:1px solid var(--border,#e4e4e7);border-radius:16px;max-width:100%}.creation-review h2{font-size:20px;margin:0 0 10px}.creation-review header p,.creation-review>p{color:#71717a;font-size:13px;line-height:1.7}.creation-review label{display:grid;gap:8px;font-size:13px}.creation-review input,.creation-review textarea,.creation-review select{width:100%;border:1px solid #dedee4;border-radius:7px;padding:9px;background:white;color:#25252b;font:inherit}.creation-review-list{display:grid;gap:16px;margin:18px 0;max-height:57vh;overflow:auto}.creation-review-list article{display:flex;gap:12px;border-bottom:1px solid #eee;padding-bottom:14px}.creation-review-list article>span{color:#8b8b98;font-size:12px;padding-top:10px}.creation-review-list article>div{display:grid;gap:8px;flex:1;min-width:0}.creation-review-row{display:grid;grid-template-columns:100px 1fr;gap:8px}.creation-review-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.creation-review .form-error{color:#b91c1c}
+.creation-review-fields{border:0;margin:0;padding:0;min-width:0}.creation-review-auto{display:flex!important;align-items:center;gap:8px;margin:12px 0 18px}.creation-review-auto input{width:auto}.creation-review details summary{font-size:12px;color:#71717a;cursor:pointer;padding:5px 0}.creation-review-fields[disabled]{opacity:.7}
+.creation-review-list .asset-review{max-width:220px}.creation-review-list .asset-review-empty{min-height:70px}.creation-review-list .asset-review-cover{max-height:124px}
+
+.creation-review--exhibit {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  background: var(--surface, #fff);
+}
+.creation-review--exhibit > header { flex: 0 0 auto; padding: 24px 26px 16px; }
+.creation-review--exhibit > .creation-review-fields { flex: 1; min-height: 0; padding: 0 26px; overflow: auto; }
+.creation-review--exhibit .creation-review-list { max-height: none; overflow: visible; }
+.creation-review-footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  border-top: 1px solid var(--border);
+  padding: 15px 26px;
+}
+.creation-review-footer > .res-error { flex: 1 1 220px; margin: 0; }
+@media (max-width: 980px) {
+  .creation-review--exhibit > .creation-review-fields { max-height: max(240px, calc(100dvh - 260px)); }
+}
+@media (max-width: 650px) {
+  .creation-review--exhibit > header, .creation-review--exhibit > .creation-review-fields, .creation-review-footer { padding-inline: 14px; }
+}

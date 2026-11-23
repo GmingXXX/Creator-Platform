@@ -1,0 +1,62 @@
+@import "./brand-mark.css";
+
+.home-workspace {
+  min-height: 100dvh;
+  background: var(--zc-bg);
+}
+.home-workspace .home-page.home-page-v15 { padding-top: 26px; }
+.home-creation-hero { padding: clamp(36px, 5.1vw, 64px) 32px 28px; }
+.home-brand-lockup { margin: 0 auto 22px; }
+.home-page-v15 .home-creation-hero .home-intro { margin-bottom: 30px; }
+.home-page-v15 .home-creation-hero .home-intro h1 { font-size: clamp(31px, 3.3vw, 47px); line-height: 1.2; font-weight: 680; letter-spacing: -.045em; }
+.home-page-v15 .home-creation-hero .home-intro > p { margin-top: 13px; color: var(--zc-muted, #596784); font-size: 14px; }
+.home-creation-hero + .home-templates { margin-top: 30px; }
+.home-creation-hero + .home-templates > header { border-top: 1px solid var(--zc-border, #e4e8f0); padding-top: 22px; }
+.home-template-cover { transition: translate .22s ease, box-shadow .22s ease; }
+.home-template-cover:is(:hover, :focus-visible) { translate: 0 -2px; box-shadow: 0 9px 18px #00000014; }
+
+.run-stage-list { position: relative; list-style: none; margin: 10px 0; }
+.run-stage-list > .run-stage {
+  position: relative;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--zc-muted, #71717a);
+}
+.run-stage-list .run-stage:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 27px;
+  bottom: -8px;
+  left: 15.5px;
+  width: 1px;
+  background: var(--border);
+}
+.run-stage-list .run-stage.current {
+  background: var(--appearance-selected, #edf2fa);
+  color: var(--zc-text, #18181b);
+  font-weight: 600;
+}
+.run-stage.current .run-stage-status { color: var(--zc-accent, #2563eb); font-size: 10px; }
+.run-stage[data-running='true'] .run-stage-marker { color: var(--zc-accent, #2563eb); }
+.run-stage[data-running='true'] .run-stage-marker::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--zc-accent, #2563eb) 18%, transparent);
+  animation: stage-pulse 2s ease-out infinite;
+}
+.assistant-message .run-stage-detail { margin: -10px 8px 16px 33px; color: var(--zc-muted); }
+@keyframes stage-pulse { from { opacity: .9; scale: .9; } to { opacity: 0; scale: 1.35; } }
+
+.artifact-result > .artifact-preview { animation: assembly-reveal .28s ease-out both; }
+@keyframes assembly-reveal { from { opacity: .5; translate: 0 5px; } to { opacity: 1; translate: 0 0; } }
+
+@media (max-width: 720px) {
+  .home-workspace .home-page.home-page-v15 { padding-top: 16px; }
+  .home-creation-hero { padding: 34px 10px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .run-stage[data-running='true'] .run-stage-marker::before { animation: none; }
+}

@@ -1,0 +1,16 @@
+import { StoryCreationDialog } from './StoryCreationDialog';
+import { workAvailableInSpace } from '../../domain/asset-access';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, GitBranch, Layers3, Play, Plus, Sparkles } from 'lucide-react';
+import { Button, Modal, PageHeader, toast } from '../../components/ui';
+import { Artwork } from '../../components/Artwork';
+import { useStudio } from '../../domain/store';
+import { Field } from './StudioShared';
+import { defaultStory } from './studioLogic';
+import '../../styles/studios.css';
+export function StoryHubPage(){
+ const navigate=useNavigate(),works=useStudio(s=>s.works),workspaceId=useStudio(s=>s.activeWorkspaceId);
+ const [open,setOpen]=useState(false),[title,setTitle]=useState(''),[starter,setStarter]=useState('');
+ return <div className="studio-hub page-content"><PageHeader title="互动影片" description="搭建互动故事与分支体验，创作内容统一保存在作品库。"><Button onClick={()=>navigate('/projects?category=interactive-film')}>查看作品</Button><Button variant="primary" onClick={()=>{setTitle('');setStarter('');setOpen(true)}}><Plus size={16}/>新建互动影片</Button></PageHeader><div className="studio-hub-hero dream-hero"><div><span className="studio-eyebrow"><GitBranch size={14}/>互动叙事工作台</span><h2>一个故事，<br/>不止一种可能。</h2><p>连接场景、设置分支、设计结局。<br/>用节点构建属于观众的互动旅程。</p><Button variant="primary" onClick={()=>{setTitle('未来工厂 · 探索之旅');setStarter('factory');setOpen(true)}}>从示例开始<ArrowRight size={16}/></Button></div><div className="dream-hero-graph"><svg viewBox="0 0 500 260"><path d="M130 130 H210 M210 130 V60 H300 M210 130 V210 H300" fill="none" stroke="#c4cbd4" strokeWidth="2"/></svg><div className="dream-mini-node dream-mini-start"><span><Play size={13}/></span><b>故事开始</b><small>走进未来工厂</small></div><div className="dream-mini-node dream-mini-choice"><span><GitBranch size={13}/></span><b>你的选择</b><small>探索未来的方向</small></div><div className="dream-mini-node dream-mini-end a"><b>绿色共生</b><small>结局 A</small></div><div className="dream-mini-node dream-mini-end b"><b>智慧新生</b><small>结局 B</small></div></div></div><div className="studio-section-title"><h2>最近创作的互动影片</h2><span>{works.filter(w=>w.kind==='story'&&!w.archived&&workAvailableInSpace(w,workspaceId)).length} 个作品</span></div><div className="studio-work-grid"><button className="studio-new-card" onClick={()=>{setTitle('');setStarter('');setOpen(true)}}><span><Plus size={25}/></span><b>创作新的互动故事</b><small>从灵感到可体验的分支剧情</small></button>{works.filter(w=>w.kind==='story'&&!w.archived&&workAvailableInSpace(w,workspaceId)).map(w=><button className="studio-work-card" key={w.id} onClick={()=>navigate(`/dream/${w.id}`)}><Artwork work={w} styleId={w.styleId} type="flow" title={w.title}/><div><h3>{w.title}</h3><p><span><GitBranch size={13}/>{w.storyNodes?.length||0} 个节点</span><span>{new Date(w.updatedAt).toLocaleDateString('zh-CN')}</span></p></div></button>)}</div><div className="dream-workflow-guide">{[['01','搭建故事场景','从素材库选择画面，写下故事的开始。'],['02','设计观众选择','用分支连接剧情，让每条路径有意义。'],['03','试运行并交付','检查连接关系，体验不同的故事结局。']].map(([n,t,d])=><div key={n}><span>{n}</span><b>{t}</b><p>{d}</p></div>)}</div><StoryCreationDialog open={open} onClose={()=>setOpen(false)} initialTitle={title} initialFlow={starter==='factory'?'观众走进未来工厂，选择探索绿色能源或智能制造，分别到达绿色共生与智慧新生结局。':''}/></div>;
+}

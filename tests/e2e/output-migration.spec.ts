@@ -1,0 +1,55 @@
+import { expect, test, type Page } from '@playwright/test';
+const readState=(page:Page)=>page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state);
+
+test('旧工程素材迁回项目，旧链接、空间、删除状态和公开快照保持',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();
+ await expect(page.getByRole('textbox',{name:'创作需求',exact:true})).toBeVisible();
+ await page.evaluate(()=>{
+  const saved=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!),state=saved.state;
+  delete state.projectSchemaVersion;
+  const presentation=state.works.find((work:{id:string})=>work.id==='work-4');
+  presentation.title='旧版讲解工程';presentation.workspaceId='xintai';presentation.pages[0].notes='迁移后应保留的讲稿内容';
+  const video=state.works.find((work:{id:string})=>work.id==='work-5');
+  video.title='旧版删除视频';video.deletedAt='2026-11-01T00:00:00.000Z';video.shots[0].narration='迁移后应保留的旁白内容';
+  const base={src:'',preview:'/media/finance.svg',description:'旧工程入口',tags:['旧工程'],author:'纪鸣',createdAt:presentation.createdAt,source:'generated',public:false};
+  state.assets.push({...base,id:'v13-presentation-index',sourceWorkId:presentation.id,name:presentation.title,kind:'presentation',workspaceId:'xintai'});
+  state.assets.push({...base,id:'v13-video-index',sourceWorkId:video.id,name:video.title,kind:'video',workspaceId:'personal',deletedAt:video.deletedAt});
+  const snapshot=structuredClone(presentation);snapshot.title='旧版公开演示';snapshot.pages[0].notes='公开时的讲稿';
+  state.assets.push({...base,id:'v13-public-presentation',name:'旧版公开演示',kind:'presentation',public:true,workSnapshot:snapshot});
+  state.favorites.push('v13-public-presentation');
+  state.submissions.push({id:'v13-submission',kind:'asset',resourceId:'v13-presentation-index',name:'旧版待审演示',author:'纪鸣',createdAt:presentation.createdAt,status:'pending',description:'已冻结的投稿',asset:{...base,id:'v13-presentation-index',name:'旧版待审演示',kind:'presentation',workSnapshot:structuredClone(presentation)}});
+  state.runs.push({id:'v13-video-run',workspaceId:'personal',prompt:'制作品牌视频',model:'GPT',styleId:'',skillIds:[],attachmentIds:[],status:'complete',step:5,outputKind:'video',createdAt:video.createdAt,workId:video.id,assetId:'v13-video-index'});
+  localStorage.setItem('zhichuang-studio-v1',JSON.stringify(saved));
+ });
+ await page.reload();
+ // A normal workspace selection persists the hydrated migration.
+ await page.getByRole('button',{name:'切换创作空间'}).click();await page.getByRole('menuitem',{name:'个人空间',exact:true}).click();
+ const migrated=await readState(page);
+ expect(migrated.works.filter((work:{id:string})=>work.id==='work-4')).toHaveLength(1);
+ expect(migrated.assets.find((asset:{id:string})=>asset.id==='v13-video-index').sourceWorkId).toBe('work-5');
+ expect(migrated.works.find((work:{id:string})=>work.id==='work-5').deletedAt).toBe('2026-11-01T00:00:00.000Z');
+ expect(migrated.templates.find((item:{id:string})=>item.id==='v13-public-presentation').work.pages[0].notes).toBe('公开时的讲稿');
+ expect(migrated.submissions.find((item:{id:string})=>item.id==='v13-submission').kind).toBe('template');
+ expect(migrated.favorites).toContain('v13-public-presentation');
+ await page.goto('/#/library?asset=v13-video-index');await expect(page).toHaveURL(/#\/projects\?status=trash$/);
+ const videoCard=page.locator('.res-project-card').filter({has:page.getByRole('heading',{name:'旧版删除视频',exact:true})});
+ await videoCard.getByRole('button',{name:'恢复作品',exact:true}).click();
+ await page.goto('/#/library?asset=v13-video-index');await expect(page).toHaveURL(/#\/video\/work-5$/);
+ await expect(page.getByLabel('讲述文案',{exact:true})).toHaveValue('迁移后应保留的旁白内容');
+ await page.goto('/#/library?asset=v13-presentation-index');await expect(page).toHaveURL(/#\/presentations\/work-4$/);
+ await expect(page.getByLabel('本页讲稿')).toHaveValue('迁移后应保留的讲稿内容');
+ expect((await readState(page)).activeWorkspaceId).toBe('xintai');
+ await page.getByLabel('本页讲稿').fill('迁移后的私有新讲稿');await page.getByRole('button',{name:'保存',exact:true}).click();
+ await page.goto('/#/library?asset=v13-public-presentation');
+ await expect(page).toHaveURL(/#\/community\?tab=templates&template=v13-public-presentation$/);
+ await expect(page.getByRole('dialog',{name:'旧版公开演示',exact:true})).toBeVisible();
+ await expect(page.getByTestId('presentation-material-preview')).toBeVisible();
+ await page.reload();
+ const final=await readState(page);
+ expect(final.templates.filter((item:{id:string})=>item.id==='v13-public-presentation')).toHaveLength(1);
+ expect(final.templates.find((item:{id:string})=>item.id==='v13-public-presentation').work.pages[0].notes).toBe('公开时的讲稿');
+ expect(final.works.find((item:{id:string})=>item.id==='work-4').pages[0].notes).toBe('迁移后的私有新讲稿');
+ expect(final.runs.find((item:{id:string})=>item.id==='v13-video-run').assetId).toBe('v13-video-index');
+ expect(errors).toEqual([]);
+});

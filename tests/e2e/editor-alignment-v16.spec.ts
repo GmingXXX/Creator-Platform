@@ -1,0 +1,38 @@
+import { test, expect } from '@playwright/test';
+
+test('画布对齐针对画布生效、支持撤销并禁用锁定组件',async({page})=>{
+ await page.goto('/#/login');
+ await page.getByRole('button',{name:'填入',exact:true}).click();
+ await page.getByRole('button',{name:'进入工作台'}).click();
+ await expect(page.getByRole('heading',{name:'您想创建什么？'})).toBeVisible();
+ await page.goto('/#/editor/work-1');
+ await expect(page.locator('.scene-board')).toBeVisible();
+ await expect(page.locator('.editor-toolbar')).not.toContainText('时间演进型');
+ const left=page.getByRole('button',{name:'左对齐',exact:true});
+ const center=page.getByRole('button',{name:'水平居中',exact:true});
+ const top=page.getByRole('button',{name:'顶对齐',exact:true});
+ await expect(left).toBeDisabled();
+ await page.locator('.node-hitbox').nth(1).click();
+ const x=page.getByRole('spinbutton',{name:'X',exact:true});
+ const y=page.getByRole('spinbutton',{name:'Y',exact:true});
+ const beforeX=await x.inputValue(),beforeY=await y.inputValue();
+ await expect(left).toHaveAttribute('title','左对齐 · 相对画布');
+ await left.click();
+ await expect(x).toHaveValue('0');
+ await page.getByTitle('撤销（⌘Z）').click();
+ await expect(x).toHaveValue(beforeX);
+ await top.click();
+ await expect(y).toHaveValue('0');
+ await page.getByTitle('撤销（⌘Z）').click();
+ await expect(y).toHaveValue(beforeY);
+ await center.click();
+ const actualX=Number(await x.inputValue());
+ const width=Number(await page.getByRole('spinbutton',{name:'W',exact:true}).inputValue());
+ const boardWidth=await page.locator('.scene-board').evaluate(el=>(el as HTMLElement).style.width);
+ expect(actualX+width/2).toBe(parseFloat(boardWidth)/2);
+ await page.getByTitle('锁定所选组件').click();
+ await expect(left).toBeDisabled();
+ await expect(center).toBeDisabled();
+ await expect(top).toBeDisabled();
+ await expect(top).toHaveAttribute('title','所选组件已锁定，请先解锁');
+});

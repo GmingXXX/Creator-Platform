@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.local/
+.env
+.env.*
+!.env.example
+*api key*
+阿里bai lian.csv
+backups/
+output/
+coverage/
+test-results/
+*.tsbuildinfo
+阿里bai lian.xlsx
+.DS_Store
+.playwright-mcp/

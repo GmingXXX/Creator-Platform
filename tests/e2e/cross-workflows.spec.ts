@@ -1,0 +1,37 @@
+
+async function generateBackground(page:Page){await page.route('**/api/ai/images**',route=>route.fulfill({json:{id:'demo-bg-test',status:'succeeded',url:'/api/ai/media/demo-bg-test.png'}}));await page.route('**/api/ai/media/demo-bg-test.png',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><rect width="1920" height="1080" fill="#123456"/></svg>'}));await expect(page.getByRole('button',{name:'生成背景',exact:true})).toBeVisible({timeout:15000});await page.getByRole('button',{name:'生成背景',exact:true}).click();const dialog=page.getByRole('dialog',{name:'生成与调整背景'});await dialog.getByLabel('画面描述').fill('深蓝工业风格背景，无文字，为事件卡片留白');await dialog.getByRole('button',{name:'生成预览',exact:true}).click();await expect(dialog.getByRole('button',{name:'采用这张背景',exact:true})).toBeEnabled();await dialog.getByRole('button',{name:'采用这张背景',exact:true}).click();}
+import {useDemoModel} from './home-helpers';
+import {test,expect,type Page} from '@playwright/test';
+import type {StudioData} from '../../src/domain/types';
+const data=(page:Page):Promise<StudioData>=>page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state);
+test.beforeEach(async({page})=>{await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();await expect(page).toHaveURL(/#\/$/)});
+
+test('生成语音气泡→个人组件→插入另一展项→独立修改',async({page})=>{
+ await page.getByRole('textbox',{name:'创作需求'}).fill('制作一个可编辑的 AI 语音聊天气泡组件，包含待机、聆听、思考、播报四种状态，可配置颜色、提示文案和声波效果。');await useDemoModel(page); await page.getByRole('button', {name:'发送创作需求'}).click();await expect(page.getByRole('button',{name:'前往素材库'})).toBeVisible({timeout:15000});
+ const initial=await data(page),run=initial.runs[0],asset=initial.assets.find(a=>a.id===run.assetId)!;expect(asset.kind).toBe('component');expect(asset.componentType).toBe('bubble');expect(asset.package?.files.some(f=>f.name==='component.schema.json')).toBe(true);
+ await page.getByRole('button',{name:'前往素材库'}).click();await expect(page.getByRole('dialog')).toContainText(asset.name);await page.getByRole('button',{name:'插入画布',exact:true}).click();await page.getByRole('dialog').locator('select').selectOption('work-1');await page.getByRole('button',{name:'添加并打开画布'}).click();await expect(page).toHaveURL(/editor\/work-1/);
+ await page.getByRole('button',{name:/^图层/}).click();await page.locator('.layer-select').filter({hasText:'语音'}).first().click();await page.locator('.editor-right textarea').first().fill('你好，欢迎探索钢铁的未来');await page.getByRole('button',{name:'保存',exact:true}).click();
+ const after=await data(page);expect(after.works.find(w=>w.id==='work-1')?.pages[0].nodes.some(n=>n.type==='bubble'&&n.content==='你好，欢迎探索钢铁的未来')).toBe(true);expect(after.assets.find(a=>a.id===asset.id)).toEqual(asset);
+ await page.getByRole('button',{name:'运行预览',exact:true}).click();await expect(page.locator('.runtime-overlay .scene-bubble')).toContainText('你好，欢迎探索钢铁的未来');
+});
+
+test('完整素材包同款生成→新资产溯源且保留旧草稿',async({page})=>{
+ await page.getByRole('textbox',{name:'创作需求'}).fill('保留这份未完成的原始需求');const old=(await data(page)).activeDraftId;
+ await page.goto('/#/community?tab=assets');await page.getByRole('button',{name:'一键同款',exact:true}).first().click();await expect(page).toHaveURL(/#\/$/);const draft=(await data(page)).drafts[0];expect(draft.reference?.complete).toBe(true);
+ await page.getByRole('textbox',{name:'创作需求'}).fill('参考此资料包，生成一张蓝色科技风背景图片，不要文字');await useDemoModel(page); await page.getByRole('button', {name:'发送创作需求'}).click();await expect(page.getByRole('button',{name:'前往素材库'})).toBeVisible({timeout:15000});
+ const after=await data(page),run=after.runs[0],created=after.assets.find(a=>a.id===run.assetId)!;expect(after.drafts.find(d=>d.id===old)?.text).toBe('保留这份未完成的原始需求');expect(created.package?.sourceId).toBe(draft.reference?.sourceId);expect(created.package!.files.length).toBeGreaterThan(draft.reference!.files.length);expect(created.package!.skillIds).toEqual(run.skillIds);
+ await page.getByRole('button',{name:'任务更多操作'}).click();await page.getByRole('menuitem',{name:'用此需求重新创作'}).click();const re=(await data(page)).drafts[0];expect(re.reference).toEqual(run.reference);expect(re.skillIds).toEqual(run.skillIds);expect(re.attachmentIds).toEqual(run.attachmentIds);
+});
+
+test('生成背景分支实际入库并保持展项引用一致',async({page})=>{
+ await page.getByRole('textbox',{name:'创作需求'}).fill('制作钢铁企业发展大事记，横向时间轴，2560×1120。');await useDemoModel(page); await page.getByRole('button', {name:'发送创作需求'}).click();await generateBackground(page);await expect(page.getByRole('button',{name:'继续编辑'})).toBeVisible({timeout:15000});
+ const state=await data(page),run=state.runs[0],asset=state.assets.find(a=>a.id===run.backgroundAssetId),work=state.works.find(w=>w.id===run.workId);expect(run.generatedBackgroundIds).toContain(asset?.id);expect(asset?.source).toBe('generated');expect(asset?.public).not.toBe(true);expect(asset?.package?.complete).toBe(true);expect(work?.pages[0].backgroundImage).toBe(asset?.src);
+});
+
+test('审核退回→修改重投→批准→撤回新版→仍复用旧发布版本',async({page})=>{
+ await page.goto('/#/review');await page.getByRole('button',{name:'演示：切换为审核员'}).click();await page.locator('.res-review-row').filter({hasText:'品牌案例与荣誉墙'}).click();await page.getByRole('button',{name:'退回修改'}).click();await page.getByRole('button',{name:'确认退回'}).click();await expect(page.getByRole('alert')).toContainText('退回原因');await page.getByRole('dialog').locator('textarea').fill('请完善案例标题，再次提交');await page.getByRole('button',{name:'确认退回'}).click();expect((await data(page)).submissions.find(s=>s.id==='submission-example-1')?.status).toBe('rejected');
+ await page.getByRole('button',{name:'关闭对话框'}).click();await page.getByRole('button',{name:'演示：切换为创作者'}).click();await page.goto('/#/editor/work-2');await page.getByLabel('展项名称',{exact:true}).fill('已完善的案例墙');await page.getByRole('button',{name:'分享投稿'}).click();await page.getByRole('dialog').getByRole('checkbox').check();await page.getByRole('button',{name:'提交审核'}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+ await page.goto('/#/review');await page.getByRole('button',{name:'演示：切换为审核员'}).click();await page.locator('.res-review-row').filter({hasText:'已完善的案例墙'}).click();for(const c of await page.locator('.res-review-checks input').all())await c.check();await page.getByRole('button',{name:'通过并发布'}).click();const published=(await data(page)).templates.find(t=>t.id==='published-work-2')!;expect(published.title).toBe('已完善的案例墙');await page.getByRole('button',{name:'关闭对话框'}).click();await page.getByRole('button',{name:'演示：切换为创作者'}).click();
+ await page.goto('/#/editor/work-2');await page.getByLabel('展项名称',{exact:true}).fill('新的未公开修订');await page.getByRole('button',{name:'分享投稿'}).click();await page.getByRole('dialog').getByRole('checkbox').check();await page.getByRole('button',{name:'提交审核'}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await page.goto('/#/review');await page.locator('.res-review-row').filter({hasText:'新的未公开修订'}).click();await page.getByRole('button',{name:'撤回投稿'}).click();expect((await data(page)).templates.find(t=>t.id===published.id)).toEqual(published);
+ await page.goto('/#/community');await page.getByRole('textbox',{name:'搜索展项模板、类型或关键词'}).fill('已完善的案例墙');await expect(page.locator('.res-template-grid article')).toHaveCount(1);await page.getByRole('button',{name:'快速复用',exact:true}).click();await expect(page).toHaveURL(/editor\//);await expect(page.getByLabel('展项名称',{exact:true})).toHaveValue('已完善的案例墙 · 我的创作');
+});

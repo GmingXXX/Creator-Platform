@@ -1,0 +1,32 @@
+import {test,expect} from '@playwright/test';
+
+test('个人知识本地场独立绑定、刷新与解绑，并保留个人空间限制',async({page})=>{
+ await page.route('**/api/ai/**',route=>route.fulfill({json:{models:[],configured:{}}}));
+ await page.goto('/#/login');
+ await page.getByRole('button',{name:'填入',exact:true}).click();
+ await page.getByRole('button',{name:'进入工作台',exact:true}).click();
+ await page.getByRole('button',{name:'查看知识本地场绑定',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'管理项目空间',exact:true});
+ await expect(dialog.getByRole('heading',{name:'个人空间',exact:true})).toBeVisible();
+ await expect(dialog.getByRole('tab',{name:'知识本地场',exact:true})).toHaveAttribute('aria-selected','true');
+ await expect(dialog.getByRole('tab',{name:'成员与权限',exact:true})).toHaveCount(0);
+ await expect(dialog.getByRole('button',{name:'归档',exact:true})).toHaveCount(0);
+ await dialog.getByRole('button',{name:'使用演示知识本地场',exact:true}).click();
+ await dialog.getByRole('button',{name:'保存绑定配置',exact:true}).click();
+ await expect(dialog.getByLabel('知识本地场id',{exact:true})).toHaveValue('demo-personal');
+ await expect(dialog).toContainText('未连接真实 ACP 服务');
+ await dialog.getByRole('button',{name:'完成',exact:true}).click();
+ await expect(page.getByRole('button',{name:'查看知识本地场绑定',exact:true})).toContainText('模拟');
+ await page.reload();
+ await page.getByRole('button',{name:'查看知识本地场绑定',exact:true}).click();
+ await expect(dialog.getByLabel('知识本地场id',{exact:true})).toHaveValue('demo-personal');
+ await dialog.getByRole('tab',{name:'基本信息',exact:true}).click();
+ await expect(dialog.getByLabel('空间名称',{exact:true})).toBeDisabled();
+ await dialog.getByRole('tab',{name:'知识本地场',exact:true}).click();
+ await dialog.getByRole('button',{name:'解除绑定',exact:true}).click();
+ await dialog.getByRole('button',{name:'确认解除',exact:true}).click();
+ await expect(dialog.getByText('尚未绑定知识本地场',{exact:true})).toBeVisible();
+ const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state);
+ expect(state.activeWorkspaceId).toBe('personal');
+ expect(state.workspaceKnowledge.personal).toBeUndefined();
+});

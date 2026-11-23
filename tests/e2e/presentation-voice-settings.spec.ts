@@ -1,0 +1,14 @@
+import {test,expect} from '@playwright/test';
+import {reloadAndReopen} from './reload-helpers';
+test('语音设置试听真实参数、保存重开及克隆样本待接入状态',async({page})=>{
+ const requests:{text:string;speaker?:string;style?:string}[]=[];
+ await page.route('**/api/ai/config',route=>route.fulfill({json:{models:[{id:'deepseek-flash',label:'DeepSeek Flash'}],configured:{deepseek:true,speech:true}}}));
+ await page.route('**/api/ai/speech',route=>{requests.push(route.request().postDataJSON());return route.fulfill({json:{url:'/api/ai/speech/voice-settings.wav'}});});
+ await page.route('**/api/ai/speech/voice-settings.wav',route=>route.fulfill({path:'public/media/narration.wav'}));
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();await page.getByRole('textbox',{name:'创作需求',exact:true}).waitFor();await page.goto('/#/presentations/work-4');
+ await page.getByRole('tab',{name:'讲解编排',exact:true}).click();await page.getByRole('button',{name:'配置声音',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'语音设置'});await expect(dialog.getByLabel('音调',{exact:true})).toBeDisabled();await dialog.getByLabel('讲解语气',{exact:true}).selectOption('warm');await dialog.getByRole('button',{name:'试听当前声音'}).click();await expect.poll(()=>requests.length).toBe(1);expect(requests[0].style).toBe('warm');await dialog.getByRole('button',{name:'停止试听'}).click();
+ await expect(dialog.getByRole('button',{name:'选择或上传声音样本'})).toBeDisabled();await dialog.getByRole('checkbox',{name:'我使用的是本人或已获授权的声音'}).check();await dialog.getByRole('button',{name:'选择或上传声音样本'}).click();
+ const picker=page.getByRole('dialog',{name:'选择声音克隆样本'});await picker.locator('input[type=file]').setInputFiles('public/media/narration.wav');await picker.getByRole('button',{name:'使用此素材',exact:true}).click();await expect(dialog.getByText('待接入克隆服务',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'应用语音设置'}).click();await page.getByRole('button',{name:'保存',exact:true}).click();await reloadAndReopen(page);
+ await page.getByRole('tab',{name:'讲解编排',exact:true}).click();await page.getByRole('button',{name:'配置声音',exact:true}).click();await expect(dialog.getByLabel('讲解语气',{exact:true})).toHaveValue('warm');await expect(dialog.getByText('待接入克隆服务',{exact:true})).toBeVisible();expect(requests).toHaveLength(1);await expect(dialog).toHaveCSS('opacity','1');await page.screenshot({path:'output/presentation-voice-settings.png',fullPage:true,animations:'disabled'});
+});

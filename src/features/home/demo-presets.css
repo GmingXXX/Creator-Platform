@@ -1,0 +1,8 @@
+.home-demo-inputs{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px;color:var(--muted);font-size:12px}
+.home-demo-inputs button{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface,#fff);color:var(--text);font:inherit;cursor:pointer}
+.home-demo-inputs button:hover{background:var(--appearance-hover,#f4f4f5)}
+.home-demo-inputs button:disabled{opacity:.65;cursor:wait}
+.home-demo-inputs p{flex-basis:100%;margin:0;text-align:center;color:#b42318}
+.home-demo-spinner{animation:home-demo-spin 1s linear infinite}
+@keyframes home-demo-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.home-demo-spinner{animation:none}}

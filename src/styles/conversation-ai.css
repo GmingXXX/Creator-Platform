@@ -1,0 +1,18 @@
+.followup-toolbar .followup-model{min-width:0;max-width:200px;flex:1;border:0;background:transparent;color:#71717a;font-size:11px;height:29px;padding:2px 18px 2px 2px;box-shadow:none;cursor:pointer}
+.followup-toolbar .followup-model:focus-visible{outline:2px solid #6677dd;outline-offset:2px;border-radius:4px}
+.followup-status{font-size:10px;line-height:1.6;color:#858590;margin:7px 2px 0}
+.followup-error{font-size:11px;line-height:1.7;background:#fff7f8;border:1px solid #f4dce1;border-radius:7px;padding:9px;color:#925361;margin:8px 0 0;overflow-wrap:anywhere}
+.floating-work-agent .floating-agent-body{display:flex;flex-direction:column;overflow:hidden}
+.floating-work-agent .editor-assistant,.floating-work-agent .work-conversation{display:flex;flex-direction:column;flex:1;min-height:0}
+.floating-work-agent .editor-assistant-intro{flex-shrink:0}
+.floating-work-agent .conversation-context-scroll,.run-conversation .conversation-context-scroll{min-height:0;overflow:auto;flex:1;scrollbar-width:thin}
+.floating-work-agent .work-followup-composer,.floating-work-agent .followup-status,.floating-work-agent .followup-error{flex-shrink:0}
+.floating-work-agent .conversation-context-scroll .conversation-history{max-height:none;overflow:visible}
+.editor-image-generation{border-top:1px solid #eeeef1;margin-top:16px;padding-top:16px}
+.editor-image-label{display:grid;gap:8px;font-size:11px;line-height:1.6;color:#52525b}
+.editor-image-label textarea{width:100%;resize:vertical;min-height:80px;padding:8px;border:1px solid #dedee6;border-radius:7px;font-size:12px;line-height:1.7;background:#fff}
+.editor-image-actions{display:flex;gap:8px;margin-top:10px}
+.editor-image-generation .field-help{font-size:10px;line-height:1.7;margin-top:8px;color:#858590}
+.editor-image-candidate{margin-top:12px;border:1px solid #e8e8ee;border-radius:8px;padding:8px}
+.editor-image-candidate>img{display:block;width:100%;max-height:200px;object-fit:contain;background:#f4f4f5;border-radius:5px}
+.editor-image-candidate>p{font-size:10px;line-height:1.7;margin:7px 0;color:#858590}

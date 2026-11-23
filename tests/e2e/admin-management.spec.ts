@@ -1,0 +1,18 @@
+import {test,expect,type Page} from '@playwright/test';
+async function enter(page:Page){await page.route('**/api/ai/config',r=>r.fulfill({json:{configured:false,models:[]}}));await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();await expect(page.getByRole('heading',{name:'您想创建什么？'})).toBeVisible();}
+async function admin(page:Page){await page.evaluate(()=>{const data=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!);data.state.role='reviewer';localStorage.setItem('zhichuang-studio-v1',JSON.stringify(data));});await page.goto('/#/admin');await page.reload();}
+test('首页首次收起、显式偏好保留，创作者管理路由不提权',async({page})=>{
+ await enter(page);await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);await page.getByRole('button',{name:'展开侧栏',exact:true}).click();await page.reload();await expect(page.locator('.app-shell')).not.toHaveClass(/sidebar-collapsed/);
+ await page.goto('/#/admin');await expect(page.getByText('需要管理员权限',{exact:true})).toBeVisible();expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.role)).toBe('creator');
+});
+test('管理员邀请、委派权限、下架恢复与私有作品保留',async({page})=>{
+ await enter(page);await admin(page);await expect(page.getByRole('heading',{name:'管理中心',exact:true})).toBeVisible();
+ const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.works);
+ await page.getByRole('button',{name:'创建模拟邀请',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByLabel('姓名',{exact:true}).fill('演示访客');await dialog.getByLabel('邮箱',{exact:true}).fill('demo@example.com');await dialog.getByRole('button',{name:'创建邀请',exact:true}).click();await expect(page.getByText('demo@example.com',{exact:true})).toBeVisible();
+ await page.getByLabel('林安的平台角色').selectOption('admin');await page.getByRole('tab',{name:'权限配置',exact:true}).click();await page.getByLabel('配置权限的管理员').selectOption('linan');await page.getByLabel('社区审核',{exact:true}).check();
+ await page.getByLabel('模拟管理员身份').selectOption('linan');await page.getByRole('tab',{name:'共享资源',exact:true}).click();await expect(page.getByText('当前管理员未获此项权限')).toBeVisible();await page.goto('/#/review');await expect(page.getByRole('heading',{name:'社区审核',exact:true})).toBeVisible();
+ await page.goto('/#/admin');await page.getByLabel('模拟管理员身份').selectOption('jiming');await page.getByRole('tab',{name:'权限配置',exact:true}).click();await page.getByLabel('配置权限的管理员').selectOption('linan');await page.getByLabel('社区审核',{exact:true}).uncheck();await page.getByLabel('模拟管理员身份').selectOption('linan');await page.goto('/#/review');await expect(page.getByText('当前管理员没有审核权限')).toBeVisible();
+ await page.goto('/#/admin');await page.getByLabel('模拟管理员身份').selectOption('jiming');await page.getByRole('tab',{name:'共享资源',exact:true}).click();const row=page.locator('.admin-row').nth(1),title=await row.locator('strong').innerText();await row.getByRole('button',{name:'下架',exact:true}).click();await page.getByRole('dialog').getByLabel('下架原因').fill('演示核验');await page.getByRole('button',{name:'确认下架'}).click();await expect(row.getByText('已下架',{exact:true})).toBeVisible();await page.goto('/#/community');await expect(page.locator('.res-card h3').filter({hasText:title})).toHaveCount(0);
+ await page.goto('/#/admin');await page.getByRole('tab',{name:'共享资源',exact:true}).click();await page.locator('.admin-row').filter({hasText:title}).getByRole('button',{name:'恢复公开',exact:true}).click();await page.goto('/#/community');await expect(page.locator('.res-card h3').filter({hasText:title})).toBeVisible();
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.works)).toEqual(before);
+});

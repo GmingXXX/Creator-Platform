@@ -1,0 +1,27 @@
+.intent-question{margin-top:16px;padding:20px;border:1px solid var(--border);border-radius:16px;background:var(--panel,var(--bg));color:var(--text);animation:intent-appear .18s ease-out}
+.intent-question header,.intent-question header>span{display:flex;align-items:center;gap:8px}
+.intent-question header{justify-content:space-between;font-size:12px;color:var(--muted)}
+.intent-question header button{display:grid;place-items:center;width:28px;height:28px;border-radius:7px;color:var(--muted)}
+.intent-question .intent-reason{font-size:12px;line-height:1.7;color:var(--muted);margin:12px 0 6px}
+.intent-question h2{font-size:16px;line-height:1.6;font-weight:600;margin:0 0 16px;outline:none}
+.intent-question fieldset{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border:0;padding:0;margin:0}
+.intent-option{display:flex;align-items:center;gap:10px;position:relative;padding:15px 12px;border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:border-color .15s,background .15s}
+.intent-option input{accent-color:var(--text);width:14px;height:14px;flex-shrink:0}
+.intent-option>svg{flex-shrink:0;color:var(--muted)}
+.intent-option>span{min-width:0}.intent-option strong{font-size:13px;font-weight:550;display:block}.intent-option small{display:block;margin-top:5px;font-size:11px;line-height:1.6;color:var(--muted)}
+.intent-option em{position:absolute;right:9px;top:-8px;font-style:normal;font-size:10px;padding:1px 5px;background:var(--panel,var(--bg));color:var(--muted)}
+.intent-option:hover,.intent-option.is-selected{border-color:var(--muted);background:var(--appearance-hover)}
+.intent-custom{display:block;margin-top:16px;font-size:12px;color:var(--muted)}
+.intent-custom textarea{display:block;box-sizing:border-box;width:100%;min-height:66px;resize:vertical;margin-top:7px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--text);font:inherit;line-height:1.6}
+.intent-presentation-context{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.intent-presentation-context label{font-size:12px;color:var(--muted)}
+.intent-presentation-context select{display:block;width:100%;margin-top:7px;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--panel,var(--bg));color:var(--text);font:inherit}
+.intent-question .intent-recommendation{font-size:12px;line-height:1.6;margin:14px 0 0;color:var(--muted)}.intent-recommendation strong{color:var(--text);font-weight:550}
+.intent-question footer{display:flex;justify-content:flex-end;margin-top:16px}.intent-continue{display:flex;align-items:center;gap:10px;border-radius:8px;padding:10px 14px;background:var(--text);color:var(--bg,#fafafa);font-size:12px}
+.intent-question button:disabled{opacity:.5;cursor:default}.intent-error{font-size:12px;color:var(--appearance-danger,#b42318)}
+.intent-answer-summary{display:flex;align-items:center;gap:7px;padding:12px;margin-top:12px;color:var(--muted);font-size:12px}.intent-answer-summary button{margin-left:auto;text-decoration:underline}
+.intent-question :is(button,input,textarea,select):focus-visible{outline:2px solid var(--muted);outline-offset:3px}
+.intent-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@keyframes intent-appear{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){.intent-question{padding:16px}.intent-question fieldset{grid-template-columns:1fr}.intent-presentation-context{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.intent-question{animation:none}.intent-option{transition:none}}

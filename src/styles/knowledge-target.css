@@ -1,0 +1,6 @@
+.composer-tool.knowledge-field-context{justify-content:flex-start;gap:6px;max-width:100%;margin:0;text-align:left;min-width:0;cursor:pointer}
+.knowledge-field-context>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.knowledge-field-context>svg{flex-shrink:0}.knowledge-field-context>small{font-size:10px;white-space:nowrap;color:#8c8c97}.knowledge-field-context:hover{color:var(--text,#202024)}
+.knowledge-field-context:focus-visible{outline:2px solid #5271ff;outline-offset:3px;border-radius:4px}
+.knowledge-target-notice{display:flex;align-items:flex-start;gap:9px;margin:10px 0;padding:10px 12px;border:1px solid #e6e7ec;border-radius:8px;background:#f8f9fb;color:#747682;font-size:12px;line-height:1.65}
+.knowledge-target-notice>svg{flex-shrink:0;margin-top:3px}.knowledge-target-notice>div{min-width:0;overflow-wrap:anywhere}.knowledge-target-notice strong,.knowledge-target-notice span,.knowledge-target-notice small{display:block}.knowledge-target-notice strong{font-weight:500;color:#454653}.knowledge-target-notice small{font-size:11px;color:#888b96}
+@media(max-width:640px){.knowledge-field-context>span{max-width:130px}}

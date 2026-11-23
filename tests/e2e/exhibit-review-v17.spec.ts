@@ -1,0 +1,44 @@
+import {test,expect} from '@playwright/test';
+test('事件配图可放大、移除，确认后保持实际绑定',async({page})=>{
+ await page.route('**/api/ai/config',r=>r.fulfill({json:{configured:{deepseek:false},models:[]}}));
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();await expect(page.getByRole('heading',{name:'您想创建什么？'})).toBeVisible();
+ await page.evaluate(async()=>{
+  const saved=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!);const useStudio={setState:(update:any)=>localStorage.setItem('zhichuang-studio-v1',JSON.stringify({...saved,state:{...saved.state,...update(saved.state)}}))};
+  const image={id:'review-client-photo',name:'客户提供照片',kind:'image',src:'/media/industrial.svg',preview:'/media/industrial.svg',description:'客户图',tags:[],author:'test',createdAt:new Date().toISOString(),source:'uploaded',workspaceId:'personal'};
+  const run={id:'review-v17',workspaceId:'personal',prompt:'企业鱼骨时间轴',model:'deepseek-flash',styleId:'industrial',skillIds:[],attachmentIds:[image.id],status:'waiting',step:1,outputKind:'exhibit',createdAt:new Date().toISOString(),aiPlan:{mode:'create',answer:'请确认',title:'事件配图验收',type:'时间演进型',sections:[{title:'启程',body:'企业成立',year:'2000',imageAssetId:image.id},...Array.from({length:8},(_,index)=>({title:`事件 ${index+2}`,body:'事件说明',year:String(2001+index)}))]}};
+  useStudio.setState(s=>({assets:[...s.assets,image],runs:[run,...s.runs]}));location.hash='/create/review-v17';
+ });
+ await page.reload();await page.goto('/#/create/review-v17');
+ await expect(page.getByRole('heading',{name:'确认内容与配图'})).toBeVisible();
+ const footer=page.locator('.creation-review-footer'), fields=page.locator('.creation-review-fields');
+ const submit=footer.getByRole('button',{name:'确认内容，继续生成'});
+ await expect(submit).toBeInViewport();
+ const footerEdge=(await footer.boundingBox())!;
+ const buttonEdge=(await submit.boundingBox())!;
+ expect(footerEdge.x+footerEdge.width-buttonEdge.x-buttonEdge.width).toBeLessThan(32);
+ await fields.evaluate(element=>{element.scrollTop=element.scrollHeight});
+ await expect.poll(()=>fields.evaluate(element=>element.scrollTop)).toBeGreaterThan(0);
+ expect(await submit.boundingBox()).toEqual(buttonEdge);
+ await fields.evaluate(element=>{element.scrollTop=0});
+ await expect(page.getByRole('region',{name:'创作进度'}).getByRole('status')).toHaveText('待确认');
+ await expect(page.locator('.creation-review-list img')).toHaveCount(1);await page.screenshot({path:'output/验收截图/exhibit-review-v17.png',fullPage:true,animations:'disabled'});
+ await page.getByRole('button',{name:'放大预览'}).click();await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'移除配图'}).click();await expect(page.locator('.creation-review-list img')).toHaveCount(0);
+ await page.getByRole('button',{name:'确认内容，继续生成'}).click();
+ const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.runs.find((r:{id:string})=>r.id==='review-v17'));
+ expect(result.structureConfirmed).toBe(true);expect(result.aiPlan.sections[0].imageAssetId).toBeUndefined();
+});
+test('自动补图只生成缺失项并将真实结果绑定至事件',async({page})=>{
+ const id='a'.repeat(32);let submits=0;
+ await page.route('**/api/ai/config',r=>r.fulfill({json:{configured:{deepseek:false},models:[]}}));
+ await page.route('**/api/ai/images',r=>{submits++;expect(r.request().postDataJSON().prompt).toContain('华院展项制作约定');return r.fulfill({status:202,json:{id,status:'pending'}})});
+ await page.route(`**/api/ai/images/${id}`,r=>r.fulfill({json:{id,status:'succeeded',url:`/api/ai/media/${id}.png`}}));
+ await page.route('**/api/ai/media/*.png',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#334466"/></svg>'}));
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();await expect(page.getByRole('heading',{name:'您想创建什么？'})).toBeVisible();
+ await page.evaluate(async()=>{const saved=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!);const useStudio={setState:(update:any)=>localStorage.setItem('zhichuang-studio-v1',JSON.stringify({...saved,state:{...saved.state,...update(saved.state)}}))};const image={id:'client-photo',name:'客户照片',kind:'image',src:'/media/industrial.svg',preview:'/media/industrial.svg',source:'uploaded',workspaceId:'personal',description:'已提供',tags:[],author:'test',createdAt:new Date().toISOString()};useStudio.setState(s=>({assets:[image,...s.assets],runs:[{id:'auto-image-v17',workspaceId:'personal',prompt:'鱼骨时间轴',model:'deepseek-flash',styleId:'industrial',skillIds:[],attachmentIds:[image.id],status:'waiting',resourceStrategy:'reuse',step:1,outputKind:'exhibit',createdAt:new Date().toISOString(),aiPlan:{mode:'create',answer:'请确认',title:'自动补图验收',type:'时间演进型',sections:[{title:'成立',body:'企业成立',year:'2000',imageAssetId:image.id},{title:'创新',body:'新工艺研发',year:'2024'}]}},...s.runs]}));location.hash='/create/auto-image-v17'});
+ await page.reload();await page.goto('/#/create/auto-image-v17');
+ await page.getByLabel('自动补齐 1 张概念配图，再生成作品').check();await page.getByRole('button',{name:'确认内容，继续生成'}).click();
+ await expect(page.getByRole('button',{name:'继续编辑',exact:true})).toBeVisible();expect(submits).toBe(1);
+ const result=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state;const r=s.runs.find((r:{id:string})=>r.id==='auto-image-v17');return {run:r,work:s.works.find((w:{id:string})=>w.id===r.workId)}});
+ expect(result.run.aiPlan.sections[0].imageAssetId).toBe('client-photo');expect(result.run.aiPlan.sections[1].imageAssetId).toContain(id);expect(result.work.pages[0].nodes.find((n:{type:string})=>n.type==='timeline').items[1].image).toBe(`/api/ai/media/${id}.png`);
+});

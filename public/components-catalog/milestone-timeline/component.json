@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "name": "里程 · 企业发展时间轴",
+  "description": "基于21st真实组件源码适配，支持参数编辑和独立运行。",
+  "entry": "index.html",
+  "bridge": "zhichuang-component-v1",
+  "fields": [
+    {
+      "key": "heading",
+      "label": "展项名称",
+      "type": "text",
+      "default": "星澜智造 · 发展里程"
+    },
+    {
+      "key": "events",
+      "label": "事件（每行：年份｜标题｜说明）",
+      "type": "textarea",
+      "default": "2012｜从一间实验室出发｜一支小团队，以工业设备感知开启创新旅程。\n2018｜让生产过程清晰可见｜数字化示范产线投运，连接设备、质量与能源数据。\n2022｜构建工厂的数字映像｜数字孪生试点落地，让设备状态与维修培训可视化。\n2025｜向协同制造迈进｜连接更多工厂与合作伙伴，探索跨区域协同。"
+    },
+    {
+      "key": "accent",
+      "label": "主题色",
+      "type": "color",
+      "default": "#245d4c"
+    },
+    {
+      "key": "imageUrl",
+      "label": "图片地址（留空沿用示意图）",
+      "type": "text",
+      "default": ""
+    },
+    {
+      "key": "motion",
+      "label": "开启切换动效",
+      "type": "boolean",
+      "default": true
+    }
+  ]
+}

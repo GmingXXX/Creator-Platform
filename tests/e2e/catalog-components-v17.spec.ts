@@ -1,0 +1,45 @@
+import {test,expect} from '@playwright/test';
+test('21st 组件预览、参数副本与画布使用同一运行内容',async({page})=>{
+ await page.goto('/#/login');
+ await page.getByLabel('账号',{exact:true}).fill('jiming');
+ await page.getByLabel('密码',{exact:true}).fill('123456');
+ await page.getByRole('button',{name:'进入工作台'}).click();
+ await page.getByRole('link',{name:'共创社区',exact:true}).click();
+ await page.getByRole('tab',{name:'展项素材',exact:true}).click();
+ await page.getByPlaceholder('搜索素材名称、风格或用途').fill('浮光');
+ await page.getByRole('button',{name:'预览浮光 · 3D 成果卡片',exact:true}).click();
+ const preview=page.frameLocator('iframe.res-html-preview');
+ await expect(preview.getByRole('heading',{name:'让每一次创新，都被看见'})).toBeVisible();
+ await page.getByRole('button',{name:'预览与试编辑',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'组件参数试编辑'});
+ await dialog.getByRole('button',{name:'预览与试编辑',exact:true}).click();
+ await expect(dialog.getByLabel('卡片标题',{exact:true})).toBeEnabled();
+ await dialog.getByLabel('卡片标题',{exact:true}).fill('客户创新成果');
+ const trial=page.frameLocator('iframe[title="组件运行预览"]');
+ await expect(trial.getByRole('heading',{name:'客户创新成果'})).toBeVisible();
+ await dialog.getByRole('button',{name:'保存为个人副本',exact:true}).click();
+ await expect(dialog).toHaveCount(0);
+ const personal=await page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state;return state.assets.find((asset:any)=>asset.package?.params.catalogEdited==='true');});
+ expect(personal.componentImport.values.title).toBe('客户创新成果');
+ expect(personal.workspaceId).toBe('personal');
+ expect(personal.public).toBe(false);
+ await page.getByRole('dialog').getByRole('button',{name:'关闭对话框',exact:true}).click();
+ await page.getByRole('link',{name:'素材库',exact:true}).click();
+ await page.getByRole('button',{name:'预览浮光 · 3D 成果卡片',exact:true}).click();
+ await expect(page.frameLocator('iframe.res-html-preview').getByRole('heading',{name:'客户创新成果'})).toBeVisible();
+ await page.getByRole('button',{name:'插入画布',exact:true}).click();
+ await page.getByRole('tab',{name:'新建交互页面',exact:true}).click();
+ await page.getByRole('button',{name:'创建并插入画布',exact:true}).click();
+ await expect(page.locator('iframe.scene-html-embed')).toHaveCount(1);
+ await expect(page.frameLocator('iframe.scene-html-embed').getByRole('heading',{name:'客户创新成果'})).toBeVisible();
+});
+
+test('互动故事预设不预装完整策划与媒体',async({page})=>{
+ await page.goto('/#/login');await page.getByLabel('账号',{exact:true}).fill('jiming');await page.getByLabel('密码',{exact:true}).fill('123456');await page.getByRole('button',{name:'进入工作台'}).click();
+ await page.getByRole('button',{name:'互动故事',exact:true}).click();
+ await expect(page.getByRole('textbox',{name:'创作需求',exact:true})).toHaveValue(/自主生成策划脚本/);
+ await page.getByRole('button',{name:'准备创作技能',exact:true}).click();
+ await expect(page.getByRole('button',{name:'准备创作技能',exact:true})).toBeEnabled();
+ const ids=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state;return s.drafts.find((d:any)=>d.id===s.activeDraftId).attachmentIds;});
+ expect(ids).toEqual([]);
+});

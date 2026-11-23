@@ -1,0 +1,21 @@
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+import type {Asset} from '../src/domain/types';
+import type {PresentationGenerationInput} from '../src/domain/presentation-generation';
+const api=vi.hoisted(()=>vi.fn());
+vi.mock('../src/domain/ai-client',()=>({aiChat:api}));
+import {generatePresentationPlan} from '../src/domain/presentation-generation';
+import {demoPresentationFiles} from '../src/domain/demo-presentation-media';
+const outlineName='星澜智造_智能演示大纲.pptx';
+const titles=['从感知到协同','企业发展历程','三项核心能力','示范产线实践','绿色运营实践','业务与服务布局','储能监测案例','下一阶段的方向'];
+const asset=(id:string,params:Record<string,string>,kind:Asset['kind']='image'):Asset=>({id,name:id,kind,src:'local.png',preview:'local.png',source:'builtin',workspaceId:'personal',description:'',tags:[],author:'',createdAt:'',package:{id:`pack-${id}`,version:'1',prompt:'',files:[],skillIds:[],params,complete:true}});
+const input=():PresentationGenerationInput=>({topic:'智能演示',audience:'观众',kind:'presentation',quantity:8,model:'deepseek-flash',workspaceId:'personal',images:demoPresentationFiles.map((f,i)=>asset(`image-${i}`,{demoInputKey:`v3:presentation:${f.path}`})),files:[{asset:asset('outline',{demoInputKey:`v1:presentation:${outlineName}`},'document'),text:'原始八页大纲',status:'readable'}]});
+const request=()=>JSON.parse(api.mock.calls[0][1][1].content);
+beforeEach(()=>{api.mockReset();api.mockResolvedValue({content:JSON.stringify({title:'演示',sections:titles.map(title=>({title,bullets:['原始事实'],narration:'讲稿',layout:'bullets',imageAssetId:'model-choice'}))})});});
+describe('demo presentation request scope',()=>{
+ it('adds media rules only for the marked eight-page source',async()=>{const result=await generatePresentationPlan(input());expect(request().demoMedia.prepared).toHaveLength(6);expect(result.sections[0].imageAssetId).toBe('image-0');expect(result.sections[7].imageAssetId).toBeUndefined();});
+ it('supports the simulated knowledge outline provenance',async()=>{const data=input();data.files=[{...data.files[0],asset:asset('outline',{knowledgeCatalogId:'zhichuang-20261116',knowledgeCase:'presentation',knowledgePath:outlineName},'document')}];await generatePresentationPlan(data);expect(request().demoMedia.prepared).toHaveLength(6);});
+ it('does not inject demo rules into ordinary outlines reusing one demo image',async()=>{const data=input();data.files=[{...data.files[0],asset:asset('ordinary',{},'document')}];data.images=data.images.slice(0,1);const result=await generatePresentationPlan(data);expect(request().demoMedia).toBeUndefined();expect(result.sections[0].imageAssetId).toBe('model-choice');});
+ it('does not force eight pages when the marked outline is requested as four pages',async()=>{const result=await generatePresentationPlan({...input(),quantity:4});expect(request().sections).toBe(4);expect(request().demoMedia).toBeUndefined();expect(result.sections[0].imageAssetId).toBe('model-choice');});
+ it('does not inject demo rules into video creation',async()=>{await generatePresentationPlan({...input(),kind:'video'});expect(request().demoMedia).toBeUndefined();});
+ it.each(['foreign','deleted','blocked'])('rejects %s outline provenance as a demo trigger',async(reason)=>{const data=input(),source=data.files[0];data.files=[{...source,asset:reason==='foreign'?{...source.asset,workspaceId:'dongguan'}:reason==='deleted'?{...source.asset,deletedAt:'2026-11-18'}:{...source.asset,metadata:{business:{note:'',subject:'',confirmed:false,usage:'reusable',allowAi:false}}}}];await generatePresentationPlan(data);expect(request().demoMedia).toBeUndefined();});
+});

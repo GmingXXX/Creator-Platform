@@ -1,0 +1,12 @@
+{
+  "id": 9040,
+  "name": "3d-card",
+  "author": "n38693842",
+  "url": "https://21st.dev/@n38693842/components/3d-card",
+  "dependencies": {
+    "filesWithRegistry": {},
+    "npmDependencies": {}
+  },
+  "retrievedAt": "2026-11-16",
+  "adaptation": "保留交互结构，改为可独立运行的 HTML/CSS/JavaScript 并开放智创参数；不需要 npm 运行时。"
+}
