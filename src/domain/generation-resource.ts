@@ -8,7 +8,7 @@ export function needsBackgroundSelection(run: Run): boolean {
 }
 
 export function resumeRunPatch(run: Run): Partial<Run> {
-  if (run.aiPlan?.mode === 'discuss') return {status:'waiting',step:1,error:undefined};
+  if (run.studioReview || run.outputKind==='exhibit'&&run.aiPlan?.mode==='create'&&!run.structureConfirmed || run.aiPlan?.mode === 'discuss') return {status:'waiting',step:1,error:undefined};
   if (run.model.startsWith('deepseek-') && !run.aiPlan && !run.aiImageTaskId) return {status:'running',step:0,error:undefined};
   const waiting = run.step >= 1 && needsBackgroundSelection(run);
   return { status: waiting ? 'waiting' : 'running', step: waiting ? 2 : run.step, error: undefined };

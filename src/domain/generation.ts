@@ -1,3 +1,6 @@
+import {collectStoryPhotoTemplates} from './story-photo';
+import {collectStoryAudio} from './story-audio';
+import {buildAIWork} from './ai-plan';
 import {applyCreationReferences,referenceExhibitType} from './reference-application';
 import type { Asset, Run, StudioData, Work } from './types';
 import { createSceneWork, createNode, now, uid } from './scenes';
@@ -22,7 +25,7 @@ export function generateArtifact(run: Run, assets:Asset[] = []): {
     const needsAdaptation = run.outputKind === 'component' && !componentType;
     const kind = needsAdaptation ? 'html' : run.outputKind;
     if (['exhibit', 'presentation', 'story'].includes(kind)) {
-        const work = bindWork(createSceneWork({
+        const work = kind==='exhibit'&&run.structureConfirmed&&run.aiPlan?.mode==='create'?buildAIWork(run.aiPlan,run,assets):bindWork(createSceneWork({
             title, type, width, height, styleId, kind: kind === 'exhibit' ? 'exhibit' : kind as 'presentation' | 'story'
         }));
         if (kind === 'exhibit' && run.resourceStrategy === 'generate') {
@@ -60,12 +63,13 @@ export function generateArtifact(run: Run, assets:Asset[] = []): {
             })),creationPackage:asset.package} };
     return { asset };
 }
-export function isAssetReferenced(data: Pick<StudioData, 'works' | 'drafts' | 'assets' | 'runs'>, id: string, src: string): boolean {
+export function isAssetReferenced(data: Pick<StudioData, 'works' | 'drafts' | 'assets' | 'runs' | 'creationSessions'>, id: string, src: string): boolean {
+    if(data.creationSessions?.some(session=>session.draft.attachmentIds.includes(id)||session.draft.reference?.files.some(file=>file.src===src)||[...session.messages,...session.queued||[]].some(entry=>entry.attachmentIds?.includes(id))))return true;
     if(data.runs.some(r=>r.backgroundAssetId===id||r.attachmentIds.includes(id)||r.reference?.files.some(f=>f.src===src)))return true;
     if (data.drafts.some(d => d.attachmentIds.includes(id) || d.reference?.files.some(f => f.src === src)))
         return true;
     const references=(referenceId:string|undefined,referenceSrc:string|undefined)=>referenceId?referenceId===id:referenceSrc===src;
-    if (data.works.some(w => references(w.coverAssetId,w.cover) || w.pages.some(p => references(p.backgroundAssetId,p.backgroundImage) || p.nodes.some(n => references(n.assetId,n.src) || n.items?.some(x => references(x.assetId,x.image)))) || w.shots?.some(x => references(x.assetId,x.src)) || w.storyNodes?.some(x => references(x.mediaAssetId,x.media))))
+    if (data.works.some(w => references(w.coverAssetId,w.cover) || [...collectStoryAudio(w),...collectStoryPhotoTemplates(w)].some(t=>references(t.assetId,t.src)) || w.pages.some(p => references(p.backgroundAssetId,p.backgroundImage) || p.nodes.some(n => references(n.assetId,n.src) || n.items?.some(x => references(x.assetId,x.image)))) || w.shots?.some(x => references(x.assetId,x.src)) || w.storyNodes?.some(x => references(x.mediaAssetId,x.media))))
         return true;
     // Fixed project copies own the same stored bytes; removing the personal catalog entry
     // does not remove those bytes or the independently versioned project record.

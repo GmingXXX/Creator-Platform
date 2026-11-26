@@ -1,3 +1,4 @@
+import {canonicalMemberAccount,platformAccountEnabled} from './admin-management';
 import {isWorkspace,workspaces,type Workspace} from './workspaces';
 import {normalizeWorkspaceKnowledge,type ACPKnowledgeBinding} from './workspace-knowledge';
 
@@ -27,14 +28,35 @@ export function normalizeMemberAccount(value:unknown):string {
  if(!account||account.length>100||!(account.includes('@')?/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(account):/^[\p{L}\p{N}_.-]{1,40}$/u.test(account)))throw new Error('请输入有效账号或邮箱，账号不含空格');
  return account;
 }
+export function matchingMemberships(members:WorkspaceMember[],handle:string){
+ const key=canonicalMemberAccount(handle);
+ return members.filter(member=>canonicalMemberAccount(member.account)===key);
+}
+
+export function primaryMembership(matches:WorkspaceMember[]):WorkspaceMember|undefined{
+ // An owner record always wins. An accepted membership takes precedence over a pending invitation.
+ const active=matches.filter(member=>member.status==='member');
+ const pool=active.length?active:matches;
+ return pool.find(member=>member.role==='owner')||pool.find(member=>member.role==='editor')||pool[0];
+}
+
+export function replaceMemberships(members:WorkspaceMember[],matches:WorkspaceMember[],next?:WorkspaceMember){
+ const ids=new Set(matches.map(member=>member.id));
+ if(!matches.length)return next?[...members,next]:members;
+ return members.flatMap(member=>member.id===next?.id?[next]:ids.has(member.id)?[]:[member]);
+}
 export function validateMemberRole(role:unknown):asserts role is 'editor'|'viewer' {
  if(role!=='editor'&&role!=='viewer')throw new Error('请选择编辑者或查看者');
+}
+export function activeWorkspaceMember(state:Pick<WorkspaceData,'workspaceMembers'|'workspaceActors'>,workspaceId:string){
+ const actor=state.workspaceActors[workspaceId]||'self';
+ const member=state.workspaceMembers[workspaceId]?.find(item=>item.id===actor&&item.status==='member');
+ return member&&platformAccountEnabled(member.account)?member:undefined;
 }
 export function workspaceRole(state:Pick<WorkspaceData,'workspaces'|'workspaceMembers'|'workspaceActors'>,workspaceId:string):WorkspaceRole|undefined {
  if(!isWorkspace(workspaceId,state.workspaces))return;
  if(workspaceId==='personal')return 'owner';
- const actor=state.workspaceActors[workspaceId]||'self';
- return state.workspaceMembers[workspaceId]?.find(member=>member.id===actor&&member.status==='member')?.role;
+ return activeWorkspaceMember(state,workspaceId)?.role;
 }
 export const workspaceCanEdit=(state:Pick<WorkspaceData,'workspaces'|'workspaceMembers'|'workspaceActors'>,id:string):boolean=>!state.workspaces.find(space=>space.id===id)?.archivedAt&&['owner','editor'].includes(workspaceRole(state,id)||'');
 export const workspaceCanManage=(state:Pick<WorkspaceData,'workspaces'|'workspaceMembers'|'workspaceActors'>,id:string):boolean=>id!=='personal'&&workspaceCanEdit(state,id)&&workspaceRole(state,id)==='owner';

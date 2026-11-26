@@ -2,21 +2,33 @@ import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
 import type {StudioData} from './types';
 
-export type AdminPermission='accounts'|'permissions'|'review'|'resources';
+export type AdminPermission='accounts'|'permissions'|'review'|'resources'|'plugins'|'models';
 export type CatalogKind='template'|'asset'|'skill'|'style';
 type PlatformRole=StudioData['role'];
 export interface AdminAccount {id:string;name:string;email:string;role:'creator'|'admin';status:'active'|'invited'|'disabled';permissions:AdminPermission[]}
 interface AuditEntry {id:string;at:string;actor:string;action:string;target:string;reason?:string}
 interface AdminData {accounts:AdminAccount[];activeAdminId:string;hidden:Record<string,{reason:string;at:string}>;audit:AuditEntry[]}
-export const adminPermissionLabels:Record<AdminPermission,string>={accounts:'账号管理',permissions:'权限配置',review:'社区审核',resources:'共享资源管理'};
+export const adminPermissionLabels:Record<AdminPermission,string>={accounts:'账号管理',permissions:'权限配置',review:'社区审核',resources:'共享资源管理',plugins:'插件管理',models:'模型管理'};
 export const catalogKindLabels:Record<CatalogKind,string>={template:'作品模板',asset:'素材',skill:'Skill',style:'设计风格'};
 export function initialAdminData():AdminData{return {activeAdminId:'jiming',hidden:{},audit:[],accounts:[
- {id:'jiming',name:'纪鸣',email:'jiming@demo.local',role:'admin',status:'active',permissions:['accounts','permissions','review','resources']},
+ {id:'jiming',name:'纪鸣',email:'jiming@demo.local',role:'admin',status:'active',permissions:['accounts','permissions','review','resources','plugins','models']},
  {id:'linan',name:'林安',email:'linan@demo.local',role:'creator',status:'active',permissions:[]},
  {id:'sunxiao',name:'孙晓',email:'sunxiao@demo.local',role:'creator',status:'invited',permissions:[]}
 ]};}
 export const useAdminManagement=create<AdminData>()(persist(()=>initialAdminData(),{name:'zhichuang-admin-v1'}));
-export function canAdmin(role:PlatformRole,permission:AdminPermission){const state=useAdminManagement.getState(),account=state.accounts.find(a=>a.id===state.activeAdminId);return role==='reviewer'&&account?.role==='admin'&&account.status==='active'&&account.permissions.includes(permission)||false;}
+export function canAdmin(role:PlatformRole,permission:AdminPermission){const state=useAdminManagement.getState(),account=state.accounts.find(a=>a.id===state.activeAdminId);return role==='reviewer'&&account?.role==='admin'&&account.status==='active'&&(account.id==='jiming'||account.permissions.includes(permission))||false;}
+// Workspace-only invitations can exist before an account is registered in this local prototype.
+function findPlatformAccount(handle:string){
+ const normalized=handle.trim().toLowerCase();
+ return useAdminManagement.getState().accounts.find(a=>a.email===normalized||a.id===normalized);
+}
+export function canonicalMemberAccount(handle:string){
+ return findPlatformAccount(handle)?.email||handle.trim().toLowerCase();
+}
+export function platformAccountEnabled(handle:string){
+ const account=findPlatformAccount(handle);
+ return !account||account.status==='active';
+}
 function requirePermission(role:PlatformRole,permission:AdminPermission){if(!canAdmin(role,permission))throw new Error('当前管理员没有此操作权限。');}
 function audit(state:AdminData,action:string,target:string,reason?:string){return [{id:crypto.randomUUID(),at:new Date().toISOString(),actor:state.accounts.find(a=>a.id===state.activeAdminId)?.name||'管理员',action,target,reason},...state.audit].slice(0,200);}
 export function recordAdminAudit(role:PlatformRole,action:string,target:string,reason?:string){requirePermission(role,'review');useAdminManagement.setState(state=>({audit:audit(state,action,target,reason)}));}
@@ -39,6 +51,8 @@ export function updateAdminAccount(role:PlatformRole,id:string,patch:Partial<Pic
 export function setAdminPermission(role:PlatformRole,id:string,permission:AdminPermission,enabled:boolean){
  requirePermission(role,'permissions');const state=useAdminManagement.getState(),account=state.accounts.find(a=>a.id===id);if(!account||account.role!=='admin')throw new Error('仅管理员可配置管理权限。');
  if(!Object.hasOwn(adminPermissionLabels,permission))throw new Error('权限无效。');if(id==='jiming'&&!enabled)throw new Error('主管理员权限不能移除。');
+ if(id===state.activeAdminId&&id!=='jiming')throw new Error('不能更改自己的后台职责。');
+ if(!canAdmin(role,permission))throw new Error('只能委派或收回自己持有的后台职责。');
  const permissions=enabled?Array.from(new Set([...account.permissions,permission])):account.permissions.filter(p=>p!==permission);
  useAdminManagement.setState({accounts:state.accounts.map(a=>a.id===id?{...a,permissions}:a),audit:audit(state,'调整管理权限',account.name,`${enabled?'授予':'移除'}${adminPermissionLabels[permission]}`)});
 }
@@ -57,3 +71,7 @@ export function moderateCatalog(role:PlatformRole,studio:StudioData,kind:Catalog
  const next=hidden?{...state.hidden,[key]:{reason:clean,at:new Date().toISOString()}}:Object.fromEntries(Object.entries(state.hidden).filter(([k])=>k!==key));
  useAdminManagement.setState({hidden:next,audit:audit(state,hidden?'下架共享资源':'恢复共享资源',item.name,clean)});
 }
+
+export function auditConfiguration(role:PlatformRole,permission:'plugins'|'models',action:string,target:string){requirePermission(role,permission);useAdminManagement.setState(state=>({audit:audit(state,action,target)}));}
+
+export function recordMemberAccessAudit(role:PlatformRole,name:string,summary:string){requirePermission(role,'permissions');useAdminManagement.setState(state=>({audit:audit(state,'更新成员空间权限',name,summary)}));}
