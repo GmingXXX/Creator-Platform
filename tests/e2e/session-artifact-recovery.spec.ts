@@ -1,0 +1,40 @@
+import {expect, test} from '@playwright/test';
+
+test('a saved image session can preview and adopt its image on the original timeline', async ({page}) => {
+  await page.route('**/api/ai/**', route => route.fulfill({json:{models:[], configured:{}}}));
+  await page.goto('/#/login');
+  await page.getByRole('button',{name:'填入',exact:true}).click();
+  await page.getByRole('button',{name:'进入工作台',exact:true}).click();
+  await expect(page.getByLabel('创作需求',{exact:true})).toBeVisible();
+  await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('zhichuang-studio-v1')!);
+    const state = saved.state;
+    const base = state.works.find((work:{id:string})=>work.id==='work-1');
+    const source = {...base,id:'legacy-work',title:'原时间轴展项',workspaceId:'personal',aiModel:'demo'};
+    const image = {...state.assets.find((asset:{id:string})=>asset.id==='personal-asset-1'),id:'legacy-image',name:'旧会话背景图',src:'/media/technology.svg'};
+    const sourceRun = {id:'legacy-source',workId:source.id,workspaceId:'personal',prompt:'制作时间轴',model:'demo',styleId:'',skillIds:[],attachmentIds:[],status:'complete',step:5,outputKind:'exhibit',createdAt:''};
+    const imageRun = {...sourceRun,id:'legacy-output',prompt:'生成一张背景图素材',outputKind:'image',assetId:image.id,workId:undefined};
+    state.works = [source,...state.works];
+    state.assets = [image,...state.assets];
+    state.runs = [sourceRun,imageRun];
+    state.creationSessions = [{id:'legacy-session',workspaceId:'personal',draft:state.drafts[0],messages:[],runId:imageRun.id,priorRunIds:[sourceRun.id]}];
+    localStorage.setItem('zhichuang-studio-v1',JSON.stringify(saved));
+  });
+  await page.goto('/#/create/legacy-session');
+  await page.reload();
+  await page.getByRole('button',{name:'在原展项试用此图'}).click();
+  const dialog=page.getByRole('dialog',{name:'试用背景 · 原时间轴展项'});
+  await expect(dialog.getByLabel('完整展项预览')).toBeVisible();
+  await dialog.getByRole('button',{name:'取消'}).click();
+  await expect(page.getByRole('heading',{name:'旧会话背景图'})).toBeVisible();
+  await page.getByRole('button',{name:'在原展项试用此图'}).click();
+  await dialog.getByRole('button',{name:'采用背景并回到展项'}).click();
+  await expect(page.getByRole('heading',{name:'原时间轴展项'})).toBeVisible();
+  await expect(page).toHaveURL(/#\/create\/legacy-session$/);
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'原时间轴展项'})).toBeVisible();
+  const persisted = await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state);
+  expect(persisted.works.find((work:{id:string})=>work.id==='legacy-work').pages[0].backgroundAssetId).toBe('legacy-image');
+  expect(persisted.creationSessions[0].priorRunIds).toContain('legacy-output');
+  expect(persisted.assets.some((asset:{id:string})=>asset.id==='legacy-image')).toBe(true);
+});

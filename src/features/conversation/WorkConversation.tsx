@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {editorBackgroundHistory} from '../editor/editor-background';
+import {StandaloneAssetContext,assetRequestKind} from '../editor/editor-asset-intent';
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowUp, Check, File, LoaderCircle, Paperclip, RotateCcw, Sparkles, Target, X, Square } from 'lucide-react';
 import type { Asset, EditTarget, Work } from '../../domain/types';
 import { useStudio } from '../../domain/store';
@@ -16,6 +18,8 @@ import {workspaceCanEdit} from '../../domain/workspace-management';
 import {isExperienceRequest} from '../../domain/creation-experience';
 
 interface WorkConversationProps {
+  draftKey?:string;
+  onNewOutput?:(text:string,ids:string[],model:string)=>boolean;
   work: Work;
   target?: EditTarget;
   onTargetChange?: (target: EditTarget) => void;
@@ -53,14 +57,15 @@ function ReferenceAttachment({ asset, remove, disabled }: { asset: Asset; remove
   </div>;
 }
 
-export function WorkConversation({ work, target, onTargetChange, onBeforeApply, onApplied, compact = false, children }: WorkConversationProps) {
+export function WorkConversation({ work, draftKey, onNewOutput, target, onTargetChange, onBeforeApply, onApplied, compact = false, children }: WorkConversationProps) {
+  const requestAsset=useContext(StandaloneAssetContext);
   const state = useStudio();
   const { models } = useAIModels();
   const [model, setModel] = useState(work.aiModel || DEFAULT_EDIT_MODEL);
   const [error, setError] = useState('');
   const [localTarget, setLocalTarget] = useState<EditTarget>({ scope: 'work' });
   const activeTarget = target || localTarget;
-  const [text, setText] = useState(() => initialDraft(work.id));
+  const [text, setText] = useState(() => initialDraft(draftKey||work.id));
   const [textWorkId, setTextWorkId] = useState(work.id);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -79,12 +84,12 @@ export function WorkConversation({ work, target, onTargetChange, onBeforeApply, 
 
   useEffect(() => () => { requestController.current?.abort(); }, [work.id]);
   useEffect(() => {
-    setText(initialDraft(work.id)); setTextWorkId(work.id); setAttachments([]); setModel(work.aiModel || DEFAULT_EDIT_MODEL); setError(''); setLocalTarget({ scope: 'work' });
+    setText(initialDraft(draftKey||work.id)); setTextWorkId(work.id); setAttachments([]); setModel(work.aiModel || DEFAULT_EDIT_MODEL); setError(''); setLocalTarget({ scope: 'work' });
     setBusy(false); sendLock.current = false;
   }, [work.id]);
   useEffect(() => {
     if (textWorkId !== work.id) return;
-    try { sessionStorage.setItem(`zc-followup-${work.id}`, text); } catch { /* Current input still works without session storage. */ }
+    try { sessionStorage.setItem(`zc-followup-${draftKey||work.id}`, text); } catch { /* Current input still works without session storage. */ }
   }, [text, textWorkId, work.id]);
   useEffect(() => {
     if (!textarea.current) return;
@@ -103,6 +108,12 @@ export function WorkConversation({ work, target, onTargetChange, onBeforeApply, 
   const changeTarget = (next: EditTarget) => { setLocalTarget(next); onTargetChange?.(next); };
   const send = async () => {
     if (!text.trim() || sendLock.current || uploading) return;
+    try{if(onNewOutput?.(text.trim(),attachments,model)){setText('');setAttachments([]);if(draftKey)sessionStorage.removeItem('zc-followup-'+draftKey);return;}}catch(reason){setError(reason instanceof Error?reason.message:'创建新成果失败');return;}
+    const assetTarget=work.kind==='story'?activeTarget.nodeId:activeTarget.pageId;
+    const assetKind=requestAsset&&assetRequestKind(text,editorBackgroundHistory(work,assetTarget,state.assets).length>0);
+    if(requestAsset&&assetKind&&workspaceCanEdit(state,work.workspaceId||'personal')){
+      requestAsset({id:crypto.randomUUID(),kind:assetKind,prompt:text.trim(),model,targetId:assetTarget});setText('');return;
+    }
     if (isExperienceRequest(text)) { experiencePanel.current?.organize(/当前|选中|只整理/.test(text) ? activeTarget : {scope:'work'}); setText(''); return; }
     const workId = work.id, prompt = text.trim(), scope = { ...activeTarget }, attached = [...attachments];
     sendLock.current = true; setBusy(true); setError('');

@@ -1,3 +1,4 @@
+import {registeredPlugin} from '../../domain/creation-plugins';
 import type {RunActivity} from './RunProgress';
 import {useEffect,useState} from 'react';
 import type {Asset,Run,Work} from '../../domain/types';
@@ -14,7 +15,7 @@ export function RunStudioReview({run,onActivity}:{run:Run;onActivity?:(activity?
   readAssetSources(assets).then(result=>{if(active)setFiles(result)}).catch(e=>{if(active)setError(e instanceof Error?e.message:'资料读取失败')});return()=>{active=false};
  },[run.id]);
  const kind=run.outputKind==='story'?'互动影片':run.outputKind==='presentation'?'智能演示':run.outputKind==='video'?'视频作品':'组件';
- const doneWork=(work:Work)=>state.updateRun(run.id,{status:'complete',step:5,workId:work.id,error:undefined});
+ const doneWork=(work:Work)=>state.updateRun(run.id,registeredPlugin(run.outputKind)?.completeCreation(run,work)??{status:'complete',step:5,workId:work.id,error:undefined});
  const doneAsset=(asset:Asset)=>state.updateRun(run.id,{status:'complete',step:5,assetId:asset.id,error:undefined});
  const system=state.systems.find(s=>s.id===run.styleId);
  const skills=state.skills.filter(s=>run.skillIds.includes(s.id));

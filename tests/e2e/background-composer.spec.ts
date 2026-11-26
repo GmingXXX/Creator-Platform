@@ -4,6 +4,7 @@ const state=(page:Page)=>page.evaluate(()=>JSON.parse(localStorage.getItem('zhic
 async function create(page:Page){
  await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();
  await page.getByRole('textbox',{name:'创作需求'}).fill('制作企业大事记时间轴交互页面');await useDemoModel(page);await page.getByRole('button',{name:'发送创作需求'}).click();
+ await page.getByRole('button',{name:'确认内容，继续生成',exact:true}).click();
  await expect(page.getByRole('button',{name:'继续编辑',exact:true})).toBeVisible({timeout:20000});
 }
 test('默认完成完整页面，背景可编辑描述、预览、采用并保留版本',async({page})=>{
@@ -36,7 +37,7 @@ for(const [width,height] of [[1080,1920],[3840,960]])test(`完整背景预览适
  await page.route('**/api/ai/**',r=>r.fulfill({contentType:'application/json',body:JSON.stringify({models:[],configured:{deepseek:false,image:false}})}));
  await create(page);const url=page.url();
  await page.evaluate(({width,height})=>{const record=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!);const id=record.state.runs[0].workId;record.state.works=record.state.works.map((w:any)=>w.id===id?{...w,width,height}:w);localStorage.setItem('zhichuang-studio-v1',JSON.stringify(record));},{width,height});
- await page.reload();await expect(page.getByRole('textbox',{name:'创作需求'})).toBeVisible();await page.goto(url);await page.getByRole('button',{name:'生成背景',exact:true}).click();
+ await page.reload();await page.goto(url);await page.getByRole('button',{name:'生成背景',exact:true}).click();
  const outer=page.getByLabel('完整页面背景预览'),inner=outer.locator('.current-work-preview');
  await expect.poll(async()=>{const a=await outer.boundingBox(),b=await inner.boundingBox();return a&&b?Math.abs(a.height-b.height):999;}).toBeLessThan(4);
  const box=await outer.boundingBox();expect(box!.width/box!.height).toBeCloseTo(width/height,1);await page.screenshot({path:`output/background-preview-${width}.png`,animations:'disabled'});

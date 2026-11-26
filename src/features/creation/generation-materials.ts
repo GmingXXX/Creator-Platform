@@ -6,13 +6,13 @@ import {useStudio} from '../../domain/store';
 import {editorImageAsset,type EditorImageTask,type ImageDraft,readImageDraft} from '../editor/editor-image-generation';
 import {materialRequestId} from './material-review-logic';
 /** Each content slot owns a durable request. A retry resumes the same provider task. */
-export async function generateReviewImage(input:{prompt:string;workspaceId:string;styleId?:string;requestKey:string;newVersion?:boolean;signal?:AbortSignal}):Promise<Asset>{
+export async function generateReviewImage(input:{prompt:string;workspaceId:string;styleId?:string;requestKey:string;size?:string;newVersion?:boolean;signal?:AbortSignal}):Promise<Asset>{
  assertAIWorkspaceWrite(input.workspaceId);
  if(!input.prompt.trim()||input.prompt.length>2000)throw new Error('画面描述需控制在 1–2000 字，请缩短后重试');
  const key=`zc-review-material:${input.workspaceId}:${input.requestKey}`;
  let draft=readImageDraft(key);
  const persist=(next:ImageDraft)=>{assertAIWorkspaceWrite(input.workspaceId);draft=next;localStorage.setItem(key,JSON.stringify(next));};
- if(!draft||input.newVersion||draft.status==='succeeded'&&draft.prompt!==input.prompt||draft.status==='failed'&&!draft.retryable){draft={requestId:materialRequestId(`${input.workspaceId}:${input.requestKey}`,Date.now()),prompt:input.prompt,size:'1696*960',status:'pending'};persist(draft);}
+ if(!draft||input.newVersion||draft.status==='succeeded'&&draft.prompt!==input.prompt||draft.status==='failed'&&!draft.retryable){draft={requestId:materialRequestId(`${input.workspaceId}:${input.requestKey}`,Date.now()),prompt:input.prompt,size:input.size||'1696*960',status:'pending'};persist(draft);}
  if(draft.status==='succeeded'){
   const existing=useStudio.getState().assets.find(asset=>asset.id===draft!.assetId&&asset.workspaceId===input.workspaceId&&assetAvailableForAI(asset,input.workspaceId));if(existing)return existing;throw new Error('原生成素材已不可用，请选择生成新版本');
  }
