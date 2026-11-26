@@ -1,3 +1,4 @@
+import {availableCommands} from './editor-capabilities';
 import type { ContentItem, MotionConfig, NodeKind, SceneNode, Work } from '../../domain/types';
 export interface History<T> { past:T[]; present:T; future:T[] }
 export const createHistory=<T,>(present:T):History<T>=>({past:[],present,future:[]});
@@ -5,7 +6,7 @@ export function pushHistory<T>(h:History<T>,value:T):History<T>{if(value===h.pre
 export function undoHistory<T>(h:History<T>):History<T>{if(!h.past.length)return h;return {past:h.past.slice(0,-1),present:h.past[h.past.length-1],future:[h.present,...h.future]}}
 export function redoHistory<T>(h:History<T>):History<T>{if(!h.future.length)return h;return {past:[...h.past,h.present],present:h.future[0],future:h.future.slice(1)}}
 export const uid=()=>crypto.randomUUID();
-export function updatePageNodes(work:Work,pageId:string,ids:string[],patch:Partial<SceneNode>|((n:SceneNode)=>SceneNode)):Work{return {...work,pages:work.pages.map(p=>p.id===pageId?{...p,nodes:p.nodes.map(n=>ids.includes(n.id)?typeof patch==='function'?patch(n):{...n,...patch}:n)}:p)}}
+export function updatePageNodes(work:Work,pageId:string,ids:string[],patch:Partial<SceneNode>|((n:SceneNode)=>SceneNode)):Work{return {...work,pages:work.pages.map(p=>p.id===pageId?{...p,nodes:p.nodes.map(n=>ids.includes(n.id)?typeof patch==='function'?patch(n):{...n,...patch,...(n.type==='text'&&!n.customName&&patch.content!==undefined&&patch.name===undefined?{name:patch.content.trim().split(/\n/)[0]?.slice(0,32)||'文本'}:{})}:n)}:p)}}
 export function alignPageSelection(work:Work,pageId:string,ids:string[],direction:'left'|'center'|'top'):Work {
  const page=work.pages.find(item=>item.id===pageId);
  const targets=page?.nodes.filter(node=>ids.includes(node.id)&&!node.locked)||[];
@@ -33,9 +34,22 @@ export function resizeNode(n:SceneNode,direction:string,dx:number,dy:number):Sce
  const y=n.y+n.h/2+offsetX*sin+offsetY*cos-h/2;
  return {...n,x:Math.round(x),y:Math.round(y),w:Math.round(w),h:Math.round(h)};
 }
-export function cloneSelectedNodes(nodes:SceneNode[],ids:string[],references:Record<string,string>={}):SceneNode[]{const map=new Map([...Object.entries(references),...ids.map(id=>[id,uid()] as [string,string])]);return nodes.filter(n=>ids.includes(n.id)).map(n=>{const itemMap=new Map(n.items?.map(item=>[item.id,uid()]));return {...structuredClone(n),id:map.get(n.id)!,name:n.name+' 副本',x:n.x+24,y:n.y+24,items:n.items?.map(item=>({...item,id:itemMap.get(item.id)!,parentId:item.parentId?itemMap.get(item.parentId):undefined})),interactions:n.interactions?.map(i=>({...i,id:uid(),targetId:map.get(i.targetId||'')||i.targetId})),commands:n.commands?.map(c=>({...c,id:uid(),targetId:map.get(c.targetId||'')||c.targetId}))}})}
+export function remapRule(rule:NonNullable<SceneNode['interactions']>[number],remap:(value:string)=>string){
+ const id=(value?:string)=>value?remap(value):undefined;
+ return {...rule,id:remap(rule.id),targetId:id(rule.targetId),additionalTargetIds:rule.additionalTargetIds?.map(remap),conditionId:id(rule.conditionId),watchedIds:rule.watchedIds?.map(remap),requiredVisitedIds:rule.requiredVisitedIds?.map(remap),steps:rule.steps?.map(s=>({...s,targetId:id(s.targetId),additionalTargetIds:s.additionalTargetIds?.map(remap)}))};
+}
+export function cloneSelectedNodes(nodes:SceneNode[],ids:string[],references:Record<string,string>={}):SceneNode[]{
+ const selected=nodes.filter(n=>ids.includes(n.id)),map=new Map(Object.entries(references));
+ for(const n of selected)for(const id of [n.id,...(n.items||[]).map(x=>x.id),...(n.interactions||[]).map(x=>x.id)])map.set(id,uid());
+ const remap=(id:string)=>map.get(id)||id;
+ return selected.map(n=>({...structuredClone(n),id:remap(n.id),name:n.name+' 副本',x:n.x+24,y:n.y+24,
+ items:n.items?.map(item=>({...item,id:remap(item.id),parentId:item.parentId?remap(item.parentId):undefined})),
+ interactions:n.interactions?.map(rule=>remapRule(rule,remap)),
+ motion:n.motion?{...structuredClone(n.motion),sequences:n.motion.sequences?.map(seq=>({...structuredClone(seq),binding:seq.binding?remap(seq.binding):seq.binding, clips:seq.clips.map(c=>({...structuredClone(c),target:remap(c.target)}))}))}:undefined,
+ commands:n.commands?.map(c=>({...c,id:c.id.startsWith(n.id+'-default-')?c.id.replace(n.id,remap(n.id)):uid(),targetId:c.targetId?remap(c.targetId):undefined}))}));
+}
 export const normalizeCommand=(s:string)=>s.toLowerCase().replace(/[\s\p{P}\p{S}]/gu,'');
-export function matchCommands(work:Work,pageId:string,text:string){const input=normalizeCommand(text);if(!input)return [];const candidates=work.pages.flatMap(page=>page.nodes.flatMap(node=>(node.commands||[]).filter(c=>c.enabled&&(c.scope==='global'||page.id===pageId)&&[c.phrase,...c.aliases.split(/[,，;；]/)].some(p=>normalizeCommand(p)===input)).map(command=>({node,command,pageId:page.id}))));const preferred=candidates.some(c=>c.command.scope==='page')?'page':'global';return candidates.filter(c=>c.command.scope===preferred)}
+export function matchCommands(work:Work,pageId:string,text:string){const input=normalizeCommand(text);if(!input)return [];const candidates=work.pages.flatMap(page=>page.nodes.flatMap(node=>availableCommands(node).filter(c=>c.enabled&&(c.scope==='global'||page.id===pageId)&&[c.phrase,...c.aliases.split(/[,，;；]/)].some(p=>normalizeCommand(p)===input)).map(command=>({node,command,pageId:page.id}))));const preferred=candidates.some(c=>c.command.scope==='page')?'page':'global';return candidates.filter(c=>c.command.scope===preferred)}
 export function findCommand(work:Work,pageId:string,text:string){return matchCommands(work,pageId,text)[0]}
 export function canSetParent(items:ContentItem[],id:string,parentId?:string){const visited=new Set([id]);let cursor=parentId;while(cursor){if(visited.has(cursor))return false;visited.add(cursor);cursor=items.find(i=>i.id===cursor)?.parentId}return true}
 export function graphLayout(items:ContentItem[]){const depths=items.map(item=>{let depth=0;let current=item;const seen=new Set([item.id]);while(current.parentId){const parent=items.find(i=>i.id===current.parentId);if(!parent||seen.has(parent.id))break;seen.add(parent.id);depth++;current=parent}return {item,depth}});const maxDepth=Math.max(0,...depths.map(n=>n.depth));return depths.map(n=>{const row=depths.filter(m=>m.depth===n.depth);const index=row.findIndex(m=>m.item.id===n.item.id);return {...n,x:(index+.5)/row.length*100,y:((n.depth+.5)/(maxDepth+1))*100,width:Math.min(38,86/row.length),height:Math.min(38,78/(maxDepth+1))}})}

@@ -1,3 +1,5 @@
+import {StandaloneAssetContext,type StandaloneAssetRequest} from './editor-asset-intent';
+import {EditorAssetStudio} from './EditorAssetStudio';
 import {useEffect,useRef,useState,type ReactNode,type PointerEvent} from 'react';
 import {createPortal} from 'react-dom';
 import {Bot,Maximize2,Minus,X} from 'lucide-react';
@@ -9,6 +11,8 @@ export interface FloatingWorkAgentProps {
 }
 /** Hiding the assistant retains its composer and any running request until the editor is left. */
 export function FloatingWorkAgent({work,pageId,nodeId,onBeforeApply,onApplied,children}:FloatingWorkAgentProps){
+ const [request,setRequest]=useState<StandaloneAssetRequest>();
+ const [tab,setTab]=useState<'edit'|'asset'>('edit');
  const [open,setOpen]=useState(false),[minimized,setMinimized]=useState(false);
  const [position,setPosition]=useState({x:Math.max(12,window.innerWidth-470),y:110});
  const [target,setTarget]=useState<EditTarget>({scope:'work'});
@@ -21,6 +25,6 @@ export function FloatingWorkAgent({work,pageId,nodeId,onBeforeApply,onApplied,ch
  const move=(e:PointerEvent<HTMLElement>)=>{if(!drag.current)return;setPosition({x:Math.max(8,Math.min(window.innerWidth-(panel.current?.offsetWidth||440)-8,drag.current.left+e.clientX-drag.current.x)),y:Math.max(8,Math.min(window.innerHeight-70,drag.current.top+e.clientY-drag.current.y))})};
  return <><button ref={trigger} type="button" className={`floating-agent-trigger ${open?'active':''}`} title="Agent 助手" aria-label="打开 Agent 助手" aria-expanded={open} onClick={()=>{setOpen(v=>!v);setMinimized(false)}}><Bot size={19}/></button>{createPortal(<div ref={panel} role="dialog" aria-label="Agent 助手" aria-modal="false" className={`floating-work-agent ${minimized?'is-minimized':''}`} style={{left:position.x,top:position.y,display:open?undefined:'none'}} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();close()}}}>
   <header onPointerDown={start} onPointerMove={move} onPointerUp={()=>{drag.current=null}} onPointerCancel={()=>{drag.current=null}}><Bot size={18}/><div><strong>Agent 助手</strong><small>{work.kind==='story'?'故事策划与节点编辑':work.kind==='presentation'?'页面、讲解与互动':work.kind==='video'?'分镜与讲述':'页面与组件编辑'}</small></div><button aria-label={minimized?'展开 Agent 助手':'最小化 Agent 助手'} title={minimized?'展开':'最小化'} onClick={()=>setMinimized(v=>!v)}>{minimized?<Maximize2 size={15}/>:<Minus size={15}/>}</button><button aria-label="关闭 Agent 助手" title="关闭" onClick={close}><X size={16}/></button></header>
-  <div className="floating-agent-body" style={{display:minimized?'none':undefined}}>{children||<WorkConversation work={work} target={target} onTargetChange={setTarget} onBeforeApply={onBeforeApply} onApplied={onApplied} compact/>}</div>
+  <div className="floating-agent-body" style={{display:minimized?'none':undefined}}><div className="asset-generation-tabs"><button type="button" aria-pressed={tab==='edit'} onClick={()=>setTab('edit')}>编辑作品</button><button type="button" aria-pressed={tab==='asset'} onClick={()=>setTab('asset')}>生成独立素材</button></div><div hidden={tab!=='asset'}><EditorAssetStudio request={request} work={work} pageId={pageId} nodeId={nodeId} onBeforeApply={onBeforeApply} onApplied={onApplied}/></div><div hidden={tab!=='edit'}><StandaloneAssetContext.Provider value={request=>{setRequest(request);setTab('asset')}}>{children||<WorkConversation work={work} target={target} onTargetChange={setTarget} onBeforeApply={onBeforeApply} onApplied={onApplied} compact/>}</StandaloneAssetContext.Provider></div></div>
  </div>,document.body)}</>;
 }

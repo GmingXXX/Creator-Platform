@@ -27,7 +27,7 @@ test('拖入空图片容器，可先调整尺寸再选择素材，支持取消�
  await page.getByRole('spinbutton',{name:'W',exact:true}).fill('620');
  await expect.poll(async()=>(await work(page)).pages[0].nodes.at(-1).w).toBe(620);
  expect((await work(page)).pages[0].nodes.at(-1).src).toBeUndefined();
- await page.getByRole('button',{name:'运行预览',exact:true}).click();
+ await page.getByRole('button',{name:'预览',exact:true}).click();
  await expect(page.locator('.runtime-overlay .scene-media-placeholder')).toHaveCount(0);
  await expect(page.locator('.runtime-overlay .scene-node-image img')).toHaveCount(0);
  await page.getByRole('button',{name:/返回编辑/}).click();

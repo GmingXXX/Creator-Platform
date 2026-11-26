@@ -1,0 +1,85 @@
+.editor-app .editor-catalog {
+  color: var(--zc-text);
+  padding-block: 2px 8px;
+}
+.editor-catalog .component-group { padding: 5px 0; }
+.editor-catalog .component-group + .component-group { border-top: 1px solid var(--zc-border); }
+.editor-catalog :is(h2, h3) { margin: 0; }
+.editor-app .editor-catalog .component-group .component-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 40px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  color: var(--zc-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: start;
+}
+.editor-catalog .component-group-title .catalog-group-icon { color: var(--zc-text); flex: none; }
+.editor-catalog .component-group-title .catalog-chevron { margin-inline-start: auto; }
+.editor-catalog .catalog-chevron { flex: none; color: var(--zc-muted); transition: transform .15s; }
+.editor-catalog button[aria-expanded="true"] > .catalog-chevron { transform: rotate(90deg); }
+.editor-catalog .catalog-children {
+  margin: 0 2px 7px 14px;
+  padding: 3px 0 3px 9px;
+  border-inline-start: 1px solid var(--zc-border);
+  gap: 3px 8px;
+}
+.editor-catalog [hidden] { display: none; }
+.editor-catalog .catalog-branch { grid-column: 1 / -1; min-width: 0; }
+.editor-catalog .catalog-family > button {
+  justify-content: flex-start;
+  gap: 7px;
+  min-height: 32px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 5px;
+  color: var(--zc-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: start;
+}
+.editor-catalog .catalog-family small {
+  margin-inline-start: auto;
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--zc-muted);
+  opacity: 1;
+}
+.editor-catalog .catalog-family button[aria-expanded="true"] { background: color-mix(in srgb,var(--zc-text) 6%,transparent); }
+.editor-catalog .catalog-variants { gap: 8px; padding: 6px 3px 10px 10px; }
+.editor-catalog .component-tile { margin-block: 2px; }
+.editor-catalog .component-tile > span { color: var(--zc-text); font-size: 12px; line-height: 1.45; padding: 4px 0 2px; }
+.editor-catalog .component-group button:is(:hover,:focus-visible) { background-color: color-mix(in srgb,var(--zc-text) 8%,transparent); color: var(--zc-text); }
+.editor-catalog button:focus-visible, .editor-inspector .inspector-section button:focus-visible {
+  outline: 2px solid var(--zc-accent); outline-offset: -2px;
+}
+.catalog-empty { padding: 20px 5px; color: var(--zc-muted); text-align: center; font-size: 13px; }
+.editor-app .editor-inspector .inspector-section > h3 { margin-bottom: 5px; font-size: 14px; color: var(--zc-text); font-weight: 650; }
+.editor-app .editor-inspector .inspector-section > h3 > button {
+  min-height: 32px; padding: 3px 2px; gap: 8px; text-align: start; border-radius: 4px;
+}
+.editor-app .editor-inspector .inspector-section h3 > button:hover { background: color-mix(in srgb,var(--zc-text) 6%,transparent); }
+.editor-app .editor-inspector .inspector-identity b { font-size: 14px; color: var(--zc-text); }
+.editor-app .editor-inspector .editor-field > span { font-size: 12px; font-weight: 500; color: var(--zc-muted); }
+.editor-app .editor-inspector .inspector-tabs > button { font-size: 12px; }
+.editor-app .component-panel-tabs > button:not(.panel-collapse-control) { font-size: 12px; }
+
+.presentation-editor .studio-panel-heading > h2 {
+  margin: 0; font-size: 15px; line-height: 1.45; font-weight: 700; color: var(--zc-text);
+}
+.presentation-editor .studio-inspector-body > h3 { font-size: 14px; font-weight: 650; color: var(--zc-text); }
+.presentation-editor .studio-field > span { font-size: 12px; font-weight: 500; color: var(--zc-muted); }
+.presentation-editor .slide-thumbnails > button > span { font-size: 11px; }
+.presentation-editor .slide-thumbnails > button > div > small { font-size: 12px; color: var(--zc-muted); line-height: 1.45; }
+.presentation-editor .slide-thumbnails > button.active > div > small { color: var(--zc-text); font-weight: 600; }
+@media (prefers-reduced-motion:reduce) {
+  .editor-catalog .catalog-chevron { transition: none; }
+}
