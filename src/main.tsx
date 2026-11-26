@@ -7,6 +7,7 @@ import './styles/shell.css';
 import './styles/home.css';
 import './styles/appearance.css';
 import './styles/ab-fusion.css';
+import './styles/control-states.css';
 
 initializeAppearance();
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
