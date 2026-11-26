@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 async function enter(page:import('@playwright/test').Page){
  await page.route('**/api/ai/config',route=>route.fulfill({json:{models:[{id:'deepseek-flash',label:'DeepSeek Flash'}],configured:{deepseek:true,speech:true}}}));
- await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();await page.getByRole('textbox',{name:'创作需求',exact:true}).waitFor();await page.goto('/#/presentations/work-4');await page.getByRole('button',{name:'开始演示',exact:true}).click();
+ await page.goto('/#/login');await page.getByRole('button',{name:'填入',exact:true}).click();await page.getByRole('button',{name:'进入工作台'}).click();await page.getByRole('textbox',{name:'创作需求',exact:true}).waitFor();await page.goto('/#/presentations/work-4');await page.getByRole('button',{name:'预览',exact:true}).click();
 }
 test('语音识别确认后仅发送一次，播报回答并保留讲解进度',async({page})=>{
  await page.addInitScript(()=>{class Recognition{lang='';continuous=false;interimResults=false;onresult:any;onend:any;onerror:any;start(){(window as any).__recognition=this;}stop(){this.onend?.()}abort(){this.onend?.()}};(window as any).SpeechRecognition=Recognition;});

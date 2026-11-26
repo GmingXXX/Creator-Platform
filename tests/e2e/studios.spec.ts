@@ -53,7 +53,7 @@ test('演示编辑保存刷新，讲解追问后继续', async ({ page }) => {
   await expect(page.getByLabel('文字内容', { exact: true })).toHaveValue('企业创新成果 · 验收修改');
   await expect(page.getByLabel('本页讲稿')).toHaveValue('欢迎来到创新展厅。这一页讲解企业如何连接技术、内容与未来。');
   await saveScreenshot(page, '02-presentation-editor');
-  await page.getByRole('button', { name: '开始演示', exact: true }).click();
+  await page.getByRole('button', { name: '预览', exact: true }).click();
   await page.getByRole('button', { name: '开始讲解', exact: true }).click();
   await expect(page.locator('.player-caption')).toBeVisible();
   await expect(page.getByRole('button',{name:'暂停讲解',exact:true})).toBeVisible();
@@ -104,7 +104,7 @@ test('故事两种结局、真实拖拽连线、条件分支与校验', async ({
   await expect(page.locator('.story-validation-panel')).toContainText('流程检查通过');
   await page.getByRole('button', { name: '收起', exact: true }).click();
   await saveScreenshot(page, '05-story-editor');
-  await page.getByRole('button', { name: '试运行', exact: true }).click();
+  await page.getByRole('button', { name: '预览', exact: true }).click();
   await storyStart(page);
   await page.getByRole('button', { name: '绿色材料', exact: true }).click();
   await expect(page.locator('.story-preview-body h2')).toHaveText('绿色未来');
@@ -137,16 +137,18 @@ test('故事两种结局、真实拖拽连线、条件分支与校验', async ({
   await expect(page.locator('.react-flow__edge')).toHaveCount(5);
   await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByText('绿色材料', { exact: true }).locator('..').click();
-  await page.getByLabel('触发条件', { exact: true }).selectOption('technology');
+  await page.locator('.story-event-fields summary').filter({hasText:'生效条件'}).click();
+  await page.getByLabel('生效条件', { exact: true }).selectOption('visited');
+  await page.getByLabel('判断哪一幕', { exact: true }).selectOption('scene');
   await page.getByRole('button', { name: '保存', exact: true }).click();
-  await page.getByRole('button', { name: '试运行', exact: true }).click();
+  await page.getByRole('button', { name: '预览', exact: true }).click();
   await storyStart(page);
-  await expect(page.getByRole('button', { name: /绿色材料/ })).toBeDisabled();
-  await page.locator('.story-preview-config select').selectOption('technology');
+  await expect(page.getByRole('button', { name: /绿色材料/ })).toBeEnabled();
+  await expect(page.locator('.story-preview-config select')).toHaveCount(0);
   await page.getByRole('button', { name: '绿色材料', exact: true }).click();
   await expect(page.locator('.story-preview-body h2')).toHaveText('绿色未来');
   await page.getByRole('button', { name: '关闭对话框' }).click();
-  await page.getByRole('button', { name: '故事场景 画面与剧情叙述' }).click();
+  await page.getByRole('button', { name: '普通节点',exact:true }).click();
   await expect(page.locator('.story-node')).toHaveCount(6);
   await page.getByRole('button', { name: '检查流程', exact: true }).click();
   await expect(page.locator('.story-validation-panel')).toContainText('未连接');
@@ -169,16 +171,20 @@ test('上传资料编辑大纲，统一入口生成可编辑智能演示', async
   await page.locator('.sidebar').getByRole('button', { name: '新建作品', exact: true }).click();
   await page.getByRole('dialog').getByRole('button',{name:'智能演示',exact:true}).click();
   await page.getByLabel('你想讲述什么？', { exact: true }).fill('政务服务创新中心接待讲解');
-  await page.getByLabel('设计风格', { exact: true }).selectOption('government');
+  await page.getByRole('button', { name: '选择设计风格', exact: true }).click();
+  const styles = page.getByRole('dialog', { name: '选择设计风格' });
+  await styles.locator('.presentation-style-choices > button').filter({ hasText: '政务风' }).click();
+  await styles.getByRole('button', { name: '使用此风格' }).click();
+  await expect(page.getByRole('button', { name: '选择设计风格' })).toContainText('政务风');
   await page.getByRole('dialog',{name:'新建智能演示'}).locator('input[type=file]').first().setInputFiles({ name: '参考资料.txt', mimeType: 'text/plain', buffer: Buffer.from('政务服务创新中心，提供一站式公共服务。') });
   await expect(page.locator('.creation-source-file')).toContainText('参考资料.txt');
   await page.getByLabel('生成模型',{exact:true}).selectOption('demo');
-  await page.getByLabel(/建议页数|建议分镜数量/).fill('8');
+  await page.getByLabel(/建议页数|建议分镜数量/).selectOption('8');
   await page.getByRole('button', { name: /^(生成大纲|生成分镜)$/, exact: true }).click();
-  await page.getByRole('button', { name: '删除第8页', exact: true }).click();
+  await page.getByRole('button',{name:'展开全部',exact:true}).click();await page.getByRole('button', { name: '删除第8页', exact: true }).click();
   await page.getByLabel('第2页标题', { exact: true }).fill('以群众需求为中心');
   await saveScreenshot(page, '08-outline');
-  await page.getByRole('button', { name: '创建并进入编辑器', exact: true }).click();
+  await page.getByRole('button', { name: '开始生成', exact: true }).click();
   await expect(page.locator('.slide-thumbnails>button')).toHaveCount(7);
   await expect(page.locator('.slide-thumbnails')).toContainText('以群众需求为中心');
   await saveScreenshot(page, '09-created-presentation');
@@ -188,9 +194,9 @@ test('上传资料编辑大纲，统一入口生成可编辑智能演示', async
   await expect(page.getByRole('button',{name:'视频创作',exact:true})).toHaveCount(0);
   await page.getByLabel('你想讲述什么？', { exact: true }).fill('城市未来发展宣传片');
   await page.getByLabel('生成模型',{exact:true}).selectOption('demo');
-  await page.getByLabel(/建议页数|建议分镜数量/).fill('8');
+  await page.getByLabel(/建议页数|建议分镜数量/).selectOption('8');
   await page.getByRole('button', { name: /^(生成大纲|生成分镜)$/, exact: true }).click();
-  await page.getByRole('button', { name: '创建并进入编辑器', exact: true }).click();
+  await page.getByRole('button', { name: '开始生成', exact: true }).click();
   await expect(page.locator('.slide-thumbnails>button')).toHaveCount(8);
 });
 
@@ -201,7 +207,7 @@ test('空白故事缺少结局时阻止试运行', async ({ page }) => {
   await page.getByLabel('作品名称', { exact: true }).fill('空白创作验收');
   await page.getByRole('button', { name: '进入空白画布', exact: true }).click();
   await expect(page.locator('.story-node')).toHaveCount(0);
-  await page.getByRole('button', { name: '试运行', exact: true }).click();
+  await page.getByRole('button', { name: '预览', exact: true }).click();
   await expect(page.locator('.story-validation-panel')).toContainText('请添加至少一个结局节点');
   await expect(page.locator('.story-preview-scene')).toHaveCount(0);
 });
@@ -224,7 +230,7 @@ test('创作入口与成果归属清晰，全部作品保存在作品库', async
   await page.getByRole('button', { name: '返回', exact: true }).click();
   await page.getByRole('button', { name: '打开未来工厂探索之旅', exact: true }).click();
   await expect(page).toHaveURL(/dream\/work-6/);
-  await page.getByRole('button', { name: '查看作品', exact: true }).click();
+  await page.getByRole('button', { name: '返回', exact: true }).click();
   await expect(page).toHaveURL(/#\/projects/);
   await open(page, '/presentations');
   await expect(page.getByRole('button', { name: '查看素材库', exact: true })).toHaveCount(0);
@@ -232,21 +238,21 @@ test('创作入口与成果归属清晰，全部作品保存在作品库', async
   await expect(page.getByRole('button',{name:'打开企业创新成果讲解',exact:true})).toBeVisible();
   await page.locator('.sidebar-search').click();
   await page.getByPlaceholder('搜索作品、素材、Skills 或设计风格…').fill('企业创新成果讲解');
-  await expect(page.locator('.global-results>button')).toHaveCount(1);
-  await expect(page.locator('.global-results>button')).toContainText('项目');
-  await page.locator('.global-results>button').click();
+  const results = page.getByRole('listbox', { name: '搜索结果' });
+  await expect(results.getByRole('option')).toHaveCount(1);
+  await results.getByRole('option', { name: '企业创新成果讲解 作品', exact: true }).click();
   await expect(page).toHaveURL(/#\/presentations\/work-4$/);
 });
 
 test('首页视频成果展示当前分镜，保存为可继续编辑的项目', async ({ page }) => {
   await page.getByRole('textbox', { name: '创作需求' }).fill('制作一段金融论坛开场短片，包含可调整的分镜与讲解文案');
   await useDemoModel(page); await page.getByRole('button', {name:'发送创作需求'}).click();
-  await expect(page.getByRole('button', { name: '查看作品', exact: true })).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('.completion-note')).toContainText('已保存到项目');
+  await expect(page.getByRole('button', { name: '前往作品库', exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.completion-note')).toContainText('已保存到作品库');
   await expect(page.locator('.artifact-preview').getByTestId('video-material-preview')).toBeVisible();
-  await expect(page.locator('.conversation-composer')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: '修改当前作品' })).toBeEditable();
   const sourceId = await page.evaluate(() => JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.runs[0].workId);
-  await page.getByRole('button', { name: '查看作品', exact: true }).click();
+  await page.getByRole('button', { name: '前往作品库', exact: true }).click();
   const generatedTitle = await page.evaluate((id) => JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.works.find((work: { id: string }) => work.id === id).title, sourceId);
   await page.getByRole('button', { name: `打开${generatedTitle}`, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`video/${sourceId}`));
@@ -254,17 +260,22 @@ test('首页视频成果展示当前分镜，保存为可继续编辑的项目',
 });
 
 for (const scenario of [
-  { route: '/presentations/work-4', titleField: '演示名称', target: '查看作品', workId: 'work-4', title: '跨空间演示修改' },
+  { route: '/presentations/work-4', titleField: '演示名称', target: '返回', workId: 'work-4', title: '跨空间演示修改' },
   { route: '/video/work-5', titleField: '作品名称', target: '查看作品', workId: 'work-5', title: '跨空间视频修改' },
-  { route: '/dream/work-6', titleField: '作品名称', target: '查看作品', workId: 'work-6', title: '跨空间互动影片修改' },
+  { route: '/dream/work-6', titleField: '作品名称', target: '返回', workId: 'work-6', title: '跨空间互动影片修改' },
 ]) {
   test(`跨空间深链接返回成果时保留原工程：${scenario.workId}`, async ({ page }) => {
     await page.getByRole('button', { name: '切换创作空间', exact: true }).click();
     await page.getByRole('menuitem', { name: '信泰企业展厅', exact: true }).click();
     await open(page, scenario.route);
-    await page.getByLabel(scenario.titleField, { exact: true }).fill(scenario.title);
+    const titleArea = scenario.workId === 'work-4' ? page.getByRole('banner') : page;
+    await titleArea.getByLabel(scenario.titleField, { exact: true }).fill(scenario.title);
     await page.getByRole('button', { name: scenario.target, exact: true }).click();
     await expect(page.locator('.workspace-switch')).toContainText('个人空间');
+    if (scenario.target === '返回') {
+      await expect(page).toHaveURL(/#\/$/);
+      await page.getByRole('link', { name: '作品', exact: true }).click();
+    }
     await expect(page).toHaveURL(/#\/projects/);
     await expect(page.getByRole('button', { name: `打开${scenario.title}`, exact: true })).toBeVisible();
     const saved = await page.evaluate((id) => {

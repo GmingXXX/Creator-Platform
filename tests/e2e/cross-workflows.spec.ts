@@ -12,7 +12,7 @@ test('生成语音气泡→个人组件→插入另一展项→独立修改',asy
  await page.getByRole('button',{name:'前往素材库'}).click();await expect(page.getByRole('dialog')).toContainText(asset.name);await page.getByRole('button',{name:'插入画布',exact:true}).click();await page.getByRole('dialog').locator('select').selectOption('work-1');await page.getByRole('button',{name:'添加并打开画布'}).click();await expect(page).toHaveURL(/editor\/work-1/);
  await page.getByRole('button',{name:/^图层/}).click();await page.locator('.layer-select').filter({hasText:'语音'}).first().click();await page.locator('.editor-right textarea').first().fill('你好，欢迎探索钢铁的未来');await page.getByRole('button',{name:'保存',exact:true}).click();
  const after=await data(page);expect(after.works.find(w=>w.id==='work-1')?.pages[0].nodes.some(n=>n.type==='bubble'&&n.content==='你好，欢迎探索钢铁的未来')).toBe(true);expect(after.assets.find(a=>a.id===asset.id)).toEqual(asset);
- await page.getByRole('button',{name:'运行预览',exact:true}).click();await expect(page.locator('.runtime-overlay .scene-bubble')).toContainText('你好，欢迎探索钢铁的未来');
+ await page.getByRole('button',{name:'预览',exact:true}).click();await expect(page.locator('.runtime-overlay .scene-bubble')).toContainText('你好，欢迎探索钢铁的未来');
 });
 
 test('完整素材包同款生成→新资产溯源且保留旧草稿',async({page})=>{

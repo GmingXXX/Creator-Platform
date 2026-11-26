@@ -200,7 +200,7 @@ test('批量上传中取消一个组件后，继续保存普通资料且错误�
 
 test('从画布上传普通组件 ZIP 复用同一检查流程，保存后确认插入',async({page})=>{
   await page.goto('/#/editor/work-1');
-  await page.locator('.component-tile').filter({hasText:'HTML 交互程序'}).click();
+  await page.locator('.component-panel-tabs').getByRole('button',{name:'素材',exact:true}).click();await page.locator('.editor-materials-panel').getByLabel('素材类型',{exact:true}).selectOption('html');await page.getByRole('button',{name:'打开素材库 / 上传'}).click();
   const zip=new JSZip();zip.file('index.html','<html><head><title>画布入口包</title></head><body><h1>画布入口验证</h1></body></html>');
   await page.getByLabel('上传可用素材',{exact:true}).setInputFiles({name:'画布入口包.zip',mimeType:'application/zip',buffer:await zip.generateAsync({type:'nodebuffer'})});
   await preview(page);

@@ -40,6 +40,6 @@ test('自定义风格预览和实际新建成果使用相同配色与字体',asy
  await page.route('**/api/ai/chat',route=>route.fulfill({json:{model:'deepseek-flash',content:JSON.stringify({title:'自定义风格作品',sections:[{title:'自定义风格验证',bullets:['验证实际字体与配色'],narration:'这是一份演示讲稿。',layout:'bullets'}]})}}));
  await page.getByRole('button',{name:'新建作品',exact:true}).click();await page.getByRole('button',{name:'智能演示',exact:true}).click();await page.getByLabel('你想讲述什么？',{exact:true}).fill('自定义风格作品');
  await page.getByRole('button',{name:'选择设计风格',exact:true}).click();const dialog=page.getByRole('dialog',{name:'选择设计风格'});await dialog.locator('.presentation-style-choices>button').filter({hasText:'自定义验收风格'}).click();await dialog.getByRole('button',{name:'使用此风格'}).click();
- await page.getByRole('button',{name:'生成大纲',exact:true}).click();await page.getByRole('button',{name:'创建并进入编辑器',exact:true}).click();await expect(page).toHaveURL(/#\/presentations\//);
+ await page.getByRole('button',{name:'生成大纲',exact:true}).click();await page.getByRole('button',{name:'开始生成',exact:true}).click();await expect(page).toHaveURL(/#\/presentations\//);
  const title=page.locator('.slide-edit-stage').getByRole('button',{name:'选择元素 主标题',exact:true});await expect(title).toHaveCSS('font-family','"Songti SC", SimSun, serif');await expect(title).toHaveCSS('color','rgb(238, 238, 238)');await expect(page.locator('.slide-edit-stage .slide-surface')).toHaveCSS('background-color','rgb(18, 52, 86)');
 });

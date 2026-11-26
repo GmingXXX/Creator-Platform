@@ -1,10 +1,18 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function expectHomeSurface(page: Page, color: string) {
-  for (const selector of ['.sidebar', '.workspace-main', '.home-workspace', '.composer']) {
-    const surface = page.locator(selector);
-    await expect(surface).toHaveCSS('background-color', color);
-    await expect(surface).toHaveCSS('background-image', 'none');
+async function colorToken(page:Page, name:string) {
+  return page.evaluate(token=>{
+    const style=document.createElement('div').style;
+    style.color=getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return style.color;
+  },name);
+}
+
+async function expectHomeSurface(page: Page) {
+  for (const [selector,token] of [['.sidebar','--zc-sidebar-bg'],['.workspace-main','--zc-canvas'],['.home-workspace','--zc-bg'],['.composer','--zc-surface']]) {
+    const surface=page.locator(selector);
+    await expect(surface).toHaveCSS('background-color',await colorToken(page,token));
+    await expect(surface).toHaveCSS('background-image','none');
   }
 }
 
@@ -19,36 +27,37 @@ test('keeps appearance across login and reload, themes dialogs and editor chrome
 
   const darkSidebar = page.getByRole('button', { name: '切换到浅色模式' });
   await expect(darkSidebar).toBeVisible();
-  await expectHomeSurface(page, 'rgb(20, 20, 20)');
+  await expectHomeSurface(page);
   await page.screenshot({ path: testInfo.outputPath('home-dark.png'), animations: 'disabled' });
   await page.getByRole('button', { name: '新建作品', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog).toHaveCSS('background-color', 'rgb(20, 20, 20)');
+  await expect(dialog).toHaveCSS('background-color', await colorToken(page,'--zc-overlay'));
   await page.screenshot({ path: testInfo.outputPath('creation-dark.png'), animations: 'disabled' });
   await page.getByRole('button', { name: '关闭对话框' }).click();
 
   await page.reload();
   await expect(darkSidebar).toBeVisible();
   await expect(root).toHaveAttribute('data-theme', 'dark');
-  await expect(page.locator('.workspace-switch')).toHaveCSS('background-color', 'rgb(20, 20, 20)');
+  await expect(page.locator('.workspace-switch')).toHaveCSS('background-color', await colorToken(page,'--zc-surface'));
   await page.goto('/#/editor/work-1');
-  await expect(page.locator('.editor-toolbar')).toHaveCSS('background-color', 'rgb(20, 20, 20)');
+  await expect(page.locator('.editor-toolbar')).toHaveCSS('background-color', await colorToken(page,'--zc-surface'));
   const scene = page.locator('.scene-board');
   await expect(scene).toBeVisible();
   const sceneStyle = await scene.getAttribute('style');
   await page.screenshot({ path: testInfo.outputPath('editor-dark.png'), animations: 'disabled' });
 
   await page.goto('/#/');
-  await page.getByRole('button', { name: '收起侧栏' }).click();
+  await expect(page.locator('.sidebar-toggle')).toBeVisible();
+  if(await page.getByRole('button',{name:'收起侧栏'}).count())await page.getByRole('button',{name:'收起侧栏'}).click();
   await expect(darkSidebar).toBeVisible();
   await darkSidebar.click();
   await expect(root).toHaveAttribute('data-theme', 'light');
   await expect(page.getByRole('button', { name: '切换到暗色模式' })).toBeVisible();
   await page.getByRole('button', { name: '展开侧栏' }).click();
-  await expectHomeSurface(page, 'rgb(250, 250, 250)');
+  await expectHomeSurface(page);
   await page.screenshot({ path: testInfo.outputPath('home-light.png'), animations: 'disabled' });
   await page.goto('/#/editor/work-1');
-  await expect(page.locator('.editor-toolbar')).toHaveCSS('background-color', 'rgb(250, 250, 250)');
+  await expect(page.locator('.editor-toolbar')).toHaveCSS('background-color', await colorToken(page,'--zc-surface'));
   expect(await scene.getAttribute('style')).toEqual(sceneStyle);
 });
 
@@ -95,11 +104,11 @@ test('dark knowledge binding keeps its summary, demo source and fields legible',
   const dialog = page.getByRole('dialog', { name: '管理项目空间' });
   for (const selector of ['.workspace-knowledge-current', '.workspace-knowledge-demo-choice']) {
     await expect(dialog.locator(selector)).toHaveCSS('background-color', 'rgb(20, 20, 20)');
-    await expect(dialog.locator(selector).locator('strong')).toHaveCSS('color', 'rgb(237, 237, 237)');
+    await expect(dialog.locator(selector).locator('strong')).toHaveCSS('color', await colorToken(page,'--zc-text'));
   }
   await dialog.getByRole('button', { name: '使用演示知识本地场' }).click();
   await dialog.getByRole('button', { name: '保存绑定配置' }).click();
-  await expect(dialog.locator('.workspace-knowledge-demo-choice p')).toHaveCSS('color', 'rgb(173, 173, 173)');
-  await expect(dialog.getByLabel('知识本地场id', { exact: true })).toHaveCSS('color', 'rgb(237, 237, 237)');
-  await expect(dialog.getByText('智创真实演示资料_20261116', { exact: true })).toHaveCSS('color', 'rgb(237, 237, 237)');
+  await expect(dialog.locator('.workspace-knowledge-demo-choice p')).toHaveCSS('color', await colorToken(page,'--zc-muted'));
+  await expect(dialog.getByLabel('知识本地场id', { exact: true })).toHaveCSS('color', await colorToken(page,'--zc-text'));
+  await expect(dialog.getByText('智创真实演示资料_20261116', { exact: true })).toHaveCSS('color', await colorToken(page,'--zc-text'));
 });

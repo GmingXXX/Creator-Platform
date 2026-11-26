@@ -5,7 +5,7 @@ async function login(page:Page){await page.goto('/#/login');await page.getByRole
 test('登录校验与受保护深链接恢复',async({page})=>{
  await page.goto('/#/editor/work-1');await expect(page).toHaveURL(/login/);await page.screenshot({path:'output/验收截图/production-login-1440.png'});
  await page.getByLabel('账号',{exact:true}).fill('jiming');await page.getByLabel('密码',{exact:true}).fill('wrong');await page.getByRole('button',{name:'进入工作台'}).click();await expect(page.getByRole('alert')).toContainText('账号或密码不正确');
- await page.getByLabel('密码',{exact:true}).fill('123456');await page.getByRole('button',{name:'进入工作台'}).click();await expect(page).toHaveURL(/editor\/work-1/);await expect(page.getByRole('button',{name:'运行预览',exact:true})).toBeVisible();
+ await page.getByLabel('密码',{exact:true}).fill('123456');await page.getByRole('button',{name:'进入工作台'}).click();await expect(page).toHaveURL(/editor\/work-1/);await expect(page.getByRole('button',{name:'预览',exact:true})).toBeVisible();
 });
 test('首页工具、上传持久化、IME与窄屏布局',async({page})=>{
  await login(page);await page.screenshot({path:'output/验收截图/production-home-1440.png'});await page.locator('.model-control').click();await page.getByRole('button',{name:/DeepSeek Pro 用于需求理解/}).click();await expect(page.locator('.model-control')).toContainText('DeepSeek Pro');await expect(page.locator('.popover')).toHaveCount(0);
