@@ -29,7 +29,7 @@ function SceneRuntimePreview({work,pageId}:{work:Work;pageId?:string}) {
 }
 
 export function RuntimePreview({work,pageId}:{work:Work;pageId?:string}) {
- return work.kind==='presentation'||work.kind==='video'?<MaterialWorkPreview key={work.id} work={work} large/>:work.kind==='story'?<StoryExperience key={work.id} nodes={work.storyNodes||[]} edges={work.storyEdges||[]} width={work.width} height={work.height}/>:<SceneRuntimePreview work={work} pageId={pageId}/>;
+ return work.kind==='presentation'||work.kind==='video'?<MaterialWorkPreview key={work.id} work={work} large/>:work.kind==='story'?<StoryExperience projectMusic={work.storyMusic} styleId={work.styleId} key={work.id} nodes={work.storyNodes||[]} edges={work.storyEdges||[]} width={work.width} height={work.height}/>:<SceneRuntimePreview work={work} pageId={pageId}/>;
 }
 
 export function FavoriteButton({id}:{id:string}) {

@@ -1,3 +1,4 @@
+import {SpacePluginSettings} from '../resources/CreationPluginSettings';
 import {useEffect,useState,type ReactNode} from 'react';
 import {ArrowLeft} from 'lucide-react';
 import {Badge,Button,Tabs,toast} from '../../components/ui';
@@ -7,7 +8,7 @@ import type {Workspace} from '../../domain/workspaces';
 import {WorkspaceMembersPanel} from './WorkspaceMembers';
 import {WorkspaceKnowledgePanel} from './WorkspaceKnowledge';
 
-export type WorkspaceSettingsTab='basic'|'members'|'knowledge';
+export type WorkspaceSettingsTab='basic'|'members'|'knowledge'|'plugins';
 export function WorkspaceSettings({space,initialTab='basic',onBack,lifecycle}:{space:Workspace;initialTab?:WorkspaceSettingsTab;onBack:()=>void;lifecycle:ReactNode}){
  const [tab,setTab]=useState<WorkspaceSettingsTab>(space.id==='personal'&&initialTab==='members'?'basic':initialTab);
  const state=useStudio(),role=workspaceRole(state,space.id);
@@ -15,9 +16,9 @@ export function WorkspaceSettings({space,initialTab='basic',onBack,lifecycle}:{s
   <Button variant="ghost" onClick={onBack}><ArrowLeft size={14}/>返回空间列表</Button>
   <div className="workspace-settings-heading"><h3>{space.name}</h3><Badge>{space.archivedAt?'已归档':'使用中'}</Badge><span>{space.id==='personal'?'个人':role?workspaceRoleLabels[role]:'无权限'}</span></div>
   {space.archivedAt&&<p className="workspace-management-hint">此空间已归档，设置与成员仅供查看。恢复使用后可继续修改。</p>}
-  <Tabs value={tab} onChange={setTab} items={space.id==='personal'?[{value:'basic',label:'基本信息'},{value:'knowledge',label:'知识本地场'}]:[{value:'basic',label:'基本信息'},{value:'members',label:'成员与权限'},{value:'knowledge',label:'知识本地场'}]}/>
-  <div role="tabpanel" aria-label={tab==='basic'?'基本信息':tab==='members'?'成员与权限':'知识本地场'}>
-   {tab==='basic'?<WorkspaceBasicSettings space={space}>{lifecycle}</WorkspaceBasicSettings>:tab==='members'?<WorkspaceMembersPanel workspaceId={space.id} workspaceName={space.name}/>:<WorkspaceKnowledgePanel workspaceId={space.id}/>}
+  <Tabs value={tab} onChange={setTab} items={space.id==='personal'?[{value:'basic',label:'基本信息'},{value:'knowledge',label:'知识本地场'},{value:'plugins',label:'创作工具'}]:[{value:'basic',label:'基本信息'},{value:'members',label:'成员与权限'},{value:'knowledge',label:'知识本地场'},{value:'plugins',label:'创作工具'}]}/>
+  <div role="tabpanel" aria-label={tab==='basic'?'基本信息':tab==='members'?'成员与权限':tab==='plugins'?'创作工具':'知识本地场'}>
+   {tab==='basic'?<WorkspaceBasicSettings space={space}>{lifecycle}</WorkspaceBasicSettings>:tab==='members'?<WorkspaceMembersPanel workspaceId={space.id} workspaceName={space.name}/>:tab==='plugins'?<SpacePluginSettings workspaceId={space.id}/>:<WorkspaceKnowledgePanel workspaceId={space.id}/>}
   </div>
  </div>;
 }
