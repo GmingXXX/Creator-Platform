@@ -1,0 +1,12 @@
+.story-sound-settings { margin-block: 12px; border-block: 1px solid var(--zc-border); padding: 10px 0; color:var(--zc-text); }
+.story-sound-settings summary { cursor:pointer; font-size:14px; font-weight:650; }
+.story-sound-settings[open] summary { margin-bottom:12px; }
+.story-sound-settings > label,.story-sound-field { display:grid; gap:7px; margin:8px 0; min-width:0; font-size:13px; }
+.story-sound-settings small {color:var(--zc-text-secondary);}
+.story-sound-actions {display:flex;align-items:center;gap:6px;min-width:0;}
+.story-sound-actions button { min-width:0;overflow:hidden;text-overflow:ellipsis; }
+.story-sound-volume {display:flex;gap:6px;align-items:center;font-size:12px;}
+.story-sound-volume input {flex:1;width:50px;min-width:32px;}
+.story-sound-volume output {font-variant-numeric:tabular-nums;}
+.story-scene-media {display:flex; align-items:center; gap:8px; margin-block:8px; font-size:13px;}
+.story-scene-media img {width:64px;height:40px;object-fit:cover;border-radius:5px;}

@@ -30,7 +30,7 @@ export function parseOutlineDraft(content:string):OutlineSection[]{
  return value.sections.map((item:unknown)=>{if(!item||typeof item!=='object')throw new Error('章节格式不正确');const section=item as Record<string,unknown>,title=line(section.title,100);if(!title)throw new Error('章节标题不能为空');return {title,narration:line(section.narration,3000)};});
 }
 export function storyMediaKind(node:{media?:string;mediaAssetId?:string},assets:Asset[]=[]):'image'|'video'|'html'{
- const asset=assets.find(a=>a.id===node.mediaAssetId||a.src===node.media);
+ const asset=node.media?assets.find(a=>a.src===node.media):assets.find(a=>a.id===node.mediaAssetId);
  if(asset?.kind==='html'||/\.html?(?:[?#]|$)/i.test(node.media||''))return 'html';
  if(asset?.kind==='video'||/\.(mp4|webm|mov)(?:[?#]|$)/i.test(node.media||''))return 'video';return 'image';
 }
