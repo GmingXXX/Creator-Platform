@@ -12,6 +12,12 @@ describe('script-driven story plan',()=>{
   const plan=parseStoryPlan(JSON.stringify(raw()),[image]);
   expect(plan.nodes.map(n=>n.title)).toEqual(['候云','择路','云海结局','石刻结局']);expect(plan.nodes[1].media).toBe(image.src);expect(plan.edges[2].target).toBe('west');expect(storyPlanErrors(plan.nodes,plan.edges)).toEqual([]);
  });
+ it('retains scripted photo confirmation and skip events, rejects a photo event on a different node',()=>{
+  const data=raw();data.nodes[1].type='photo';
+  const typed={...data,edges:data.edges.map((edge,i)=>({...edge,...(i===1?{trigger:'photoConfirm'}:i===2?{trigger:'photoSkip'}:{})}))};
+  expect(parseStoryPlan(JSON.stringify(typed),[image]).edges.map(e=>e.trigger)).toEqual([undefined,'photoConfirm','photoSkip']);
+  typed.nodes[1].type='scene';expect(()=>parseStoryPlan(JSON.stringify(typed),[image])).toThrow(/拍照节点/);
+ });
  it('accepts a concise suggested title, keeps old plans compatible and does not replace an authored work title',()=>{
   const suggested=parseStoryPlan(JSON.stringify({...raw(),title:'泰山寻碑'}),[image]);expect(suggested.title).toBe('泰山寻碑');expect(parseStoryPlan(JSON.stringify(raw()),[image]).title).toBeUndefined();
   const work=buildStoryWork({title:'用户指定的作品名',flow:'按脚本生成',files:[],assets:[image],plan:suggested,width:1920,height:1080,workspaceId:'personal',model:'deepseek-flash'});expect(work.title).toBe('用户指定的作品名');
@@ -33,9 +39,9 @@ describe('script-driven story plan',()=>{
   const cycle=raw();cycle.edges.push({source:'east',target:'start',label:'回去'});expect(()=>parseStoryPlan(JSON.stringify(cycle),[image])).toThrow(/结局|循环/);
   const duplicate=raw();duplicate.edges[2].target='east';expect(()=>parseStoryPlan(JSON.stringify(duplicate),[image])).toThrow(/不同/);
  });
- it('requires branches to use visible unique option text, and scene to use one continuation',()=>{
+ it('requires branches to use visible unique option text, and permits branches on ordinary scenes',()=>{
   const input=raw();input.edges[2].label=input.edges[1].label;expect(()=>parseStoryPlan(JSON.stringify(input),[image])).toThrow(/选项/);
-  const scene=raw();scene.nodes[1].type='scene';expect(()=>parseStoryPlan(JSON.stringify(scene),[image])).toThrow(/分支节点/);
+  const scene=raw();scene.nodes[1].type='scene';expect(parseStoryPlan(JSON.stringify(scene),[image]).edges).toHaveLength(3);
  });
  it('rejects unsupported node types and overlong story instead of silently truncating',()=>{
   const input=raw();input.nodes[1].type='camera';expect(()=>parseStoryPlan(JSON.stringify(input),[image])).toThrow(/类型/);

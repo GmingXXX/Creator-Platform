@@ -15,7 +15,7 @@ async function saved(page:Page){return page.evaluate(()=>{const state=JSON.parse
 function silence(){const samples=8000,buffer=Buffer.alloc(44+samples*2);buffer.write('RIFF');buffer.writeUInt32LE(buffer.length-8,4);buffer.write('WAVEfmt ',8);buffer.writeUInt32LE(16,16);buffer.writeUInt16LE(1,20);buffer.writeUInt16LE(1,22);buffer.writeUInt32LE(8000,24);buffer.writeUInt32LE(16000,28);buffer.writeUInt16LE(2,32);buffer.writeUInt16LE(16,34);buffer.write('data',36);buffer.writeUInt32LE(samples*2,40);return buffer;}
 test('zero pending images skips image service and narration preparation is bounded with an explicit pending notice',async({page})=>{
  let images=0,speech=0;await page.route('**/api/ai/images',route=>{images++;return route.fulfill({status:500});});await page.route('**/api/ai/speech',route=>{speech++;return route.fulfill({json:{url:'/api/ai/audio/ready.wav'}});});
- await prepare(page);const checkbox=page.locator('.generation-delivery-status input');await expect(checkbox).toBeDisabled();await expect(checkbox).not.toBeChecked();await page.getByRole('button',{name:'按此方案生成作品',exact:true}).click();
+ await prepare(page);const checkbox=page.locator('.generation-delivery-status input');await expect(checkbox).toBeDisabled();await expect(checkbox).not.toBeChecked();await page.getByRole('button',{name:'开始生成',exact:true}).click();
  await expect(page.locator('.artifact-result-info h2')).toHaveText('配音恢复验收');await expect(page.locator('.toast-host')).toContainText('剩余 2 句将在演示时按需生成');expect(images).toBe(0);expect(speech).toBe(4);
  const result=await saved(page),config=JSON.parse(result.creationPackage.params.presentationStudio);expect(result.pages).toHaveLength(2);expect(Object.values(config.pages).flatMap((p:any)=>p.sentences).filter((s:any)=>s.audioUrl)).toHaveLength(4);
 });
@@ -23,9 +23,9 @@ test('rate limited narration keeps complete work and successes; playback retries
  let speech=0;await page.addInitScript(()=>{HTMLMediaElement.prototype.play=async()=>{};});
  await page.route('**/api/ai/audio/*.wav',route=>route.fulfill({contentType:'audio/wav',body:silence()}));
  await page.route('**/api/ai/speech',route=>{speech++;return speech===2||speech===3?route.fulfill({status:429,json:{error:'操作过于频繁，请稍后重试'}}):route.fulfill({json:{url:'/api/ai/audio/ready.wav'}});});
- await prepare(page);await page.getByRole('button',{name:'按此方案生成作品',exact:true}).click();await expect(page.locator('.artifact-result-info h2')).toHaveText('配音恢复验收');await expect(page.locator('.toast-host')).toContainText('5 句讲解音频暂未生成');
+ await prepare(page);await page.getByRole('button',{name:'开始生成',exact:true}).click();await expect(page.locator('.artifact-result-info h2')).toHaveText('配音恢复验收');await expect(page.locator('.toast-host')).toContainText('5 句讲解音频暂未生成');
  const result=await saved(page);expect(result.pages).toHaveLength(2);expect(JSON.parse(result.creationPackage.params.presentationStudio).pages[result.pages[0].id].sentences[0].audioUrl).toBe('/api/ai/audio/ready.wav');expect(speech).toBe(2);
- await page.getByRole('button',{name:'继续编辑',exact:true}).click();await page.getByRole('button',{name:'开始演示',exact:true}).click();const player=page.getByRole('dialog',{name:'演示播放'});
+ await page.getByRole('button',{name:'继续编辑',exact:true}).click();await page.getByRole('button',{name:'预览',exact:true}).click();const player=page.getByRole('dialog',{name:'演示播放'});
  await player.getByRole('button',{name:'开始讲解',exact:true}).click();await expect(player.getByRole('button',{name:'暂停讲解',exact:true})).toBeVisible();expect(speech).toBe(2);
  await player.getByRole('button',{name:'下一页',exact:true}).click();await player.getByRole('button',{name:'开始讲解',exact:true}).click();await expect(player.getByRole('alert')).toContainText('操作过于频繁');expect(speech).toBe(3);
  await player.getByRole('button',{name:'重试',exact:true}).click();await expect(player.getByRole('button',{name:'暂停讲解',exact:true})).toBeVisible();expect(speech).toBe(4);
@@ -38,7 +38,7 @@ for(const editPlan of [false,true])test(`refresh during narration ${editPlan?'in
   if(!resumed&&spoken.length===2)return; // Deliberately leave the in-flight request unresolved until reload.
   return route.fulfill({json:{url:'/api/ai/audio/ready.wav'}});
  });
- await prepare(page);await page.getByRole('button',{name:'按此方案生成作品',exact:true}).click();
+ await prepare(page);await page.getByRole('button',{name:'开始生成',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>{
   const checkpoint=JSON.parse(localStorage.getItem('zc-creation-plan:personal:audio-recovery')||'null');
   const state=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state;
@@ -53,7 +53,7 @@ for(const editPlan of [false,true])test(`refresh during narration ${editPlan?'in
   await page.getByLabel('第1页标题').fill('重新确认后的标题');
   await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('zc-creation-plan:personal:audio-recovery')!).draftWorkId)).toBeUndefined();
  }
- await page.getByRole('button',{name:'按此方案生成作品',exact:true}).click();await expect(page.locator('.artifact-result-info h2')).toHaveText('配音恢复验收');
+ await page.getByRole('button',{name:'开始生成',exact:true}).click();await expect(page.locator('.artifact-result-info h2')).toHaveText('配音恢复验收');
  const result=await saved(page);
  const works=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.works.filter((w:any)=>w.title==='配音恢复验收'));
  expect(works).toHaveLength(editPlan?2:1);expect(works.some((w:any)=>w.id===originalId)).toBe(true);

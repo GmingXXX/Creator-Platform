@@ -1,0 +1,27 @@
+.run-page.session-page{height:100dvh;min-height:0}
+.session-page .run-layout{min-height:0;overflow:hidden}
+.session-page .run-conversation{display:flex;flex-direction:column;min-height:0;overflow:hidden;gap:0}
+.session-scroll{min-height:0;flex:1;overflow:auto;scrollbar-width:thin}
+.session-history .user-message,.session-answer{margin-bottom:16px}
+.session-answer{display:flex;gap:10px;align-items:flex-start;padding:8px}
+.session-answer svg{flex-shrink:0;margin-top:3px}
+.session-answer p{margin:0;white-space:pre-wrap}
+.session-footer{padding:12px 0 4px;flex:none}
+.session-footer form{border:1px solid var(--appearance-divider,#8886);border-radius:14px;background:var(--zc-surface,transparent);padding:10px}
+.session-footer textarea{font:inherit;width:100%;min-height:54px;resize:vertical;max-height:130px;color:inherit;background:transparent;border:0}
+.session-tools,.session-choices{display:flex;gap:8px;align-items:center}
+.session-tools{justify-content:space-between}
+.session-tools button,.session-choices button,.session-mobile-toggle{padding:6px 10px;border:1px solid #8885;border-radius:8px;color:inherit;background:transparent;cursor:pointer}
+.session-tools button:disabled{opacity:.45}
+.session-answer-body{min-width:0}
+.session-choices{flex-wrap:wrap;margin-top:8px}
+.session-footer small{display:block;padding:4px 0}
+.session-page .conversation-composer{flex:0 1 auto;max-height:55%;min-height:180px}
+.session-page .run-artifact{overflow:auto;min-height:0}
+.session-mobile-toggle{display:none}
+@media(max-width:760px){
+.session-mobile-toggle{display:inline-flex}
+.session-page .run-layout{display:flex;flex:1}
+.session-page .run-conversation,.session-page .run-artifact{width:100%;flex:1}
+.session-page[data-pane="chat"] .run-artifact,.session-page[data-pane="preview"] .run-conversation{display:none}
+}

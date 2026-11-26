@@ -11,12 +11,14 @@ test('真实模型节点经过确认和素材绑定，两条路线进入不同�
  const dialog=page.getByRole('dialog',{name:'创建互动影片'});await dialog.getByLabel('作品名称',{exact:true}).fill('泰山寻碑真实节点验收');
  await dialog.locator('input[type=file]').first().setInputFiles({name:'泰山寻碑策划.md',mimeType:'text/markdown',buffer:Buffer.from('模拟故事：候云后进入择路，观众看云海或寻石刻。两条路线分别抵达云海记忆和石刻回声。')});
  await page.getByRole('button',{name:'生成节点草稿',exact:true}).click();await expect(page.locator('.creation-node')).toHaveCount(6);expect(request).toContain('两条路线分别抵达');
+ await expect(dialog.getByRole('region',{name:'节点与素材流程图'}).getByRole('button')).toHaveCount(6);
+ const startCard=dialog.locator('.creation-node').first();await startCard.getByText('场景素材与叠加控件',{exact:true}).click();await startCard.getByRole('button',{name:'把选项放到画面上'}).click();await expect(startCard.getByText('请君入山 · 互动按钮',{exact:true})).toBeVisible();
  const stateBefore=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state);expect(stateBefore.works.some((w:{title:string})=>w.title==='泰山寻碑真实节点验收')).toBe(false);
  await dialog.locator('.creation-node').nth(2).locator('input[type=file]').setInputFiles({name:'云海互动.html',mimeType:'text/html',buffer:Buffer.from('<!doctype html><meta charset="utf-8"><body style="background:#16465a;color:white"><h1>云海之门</h1><button onclick="parent.postMessage({type:\'zhichuang:complete\'},\'*\')">完成探索</button></body>')});
  await dialog.getByRole('button',{name:'创建并进入节点画布',exact:true}).click();await expect(page).toHaveURL(/#\/dream\//);
  const work=await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.works.find((w:{title:string})=>w.title==='泰山寻碑真实节点验收'));
  expect(work.storyNodes).toHaveLength(6);expect(work.storyNodes.find((n:StoryNode)=>n.id==='east').mediaAssetId).toBeTruthy();expect(work.creationPackage.params.scriptText).toContain('模拟故事');
- await page.getByRole('button',{name:'试运行',exact:true}).click();await expect(page.getByText('探索倾向',{exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'预览',exact:true}).click();await expect(page.getByText('探索倾向',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'请君入山',exact:true}).click();await page.getByRole('button',{name:'看云海',exact:true}).click();
  await expect(page.frameLocator('iframe[title="登临云海"]').getByRole('heading',{name:'云海之门'})).toBeVisible();await page.frameLocator('iframe[title="登临云海"]').getByRole('button',{name:'完成探索'}).click();await expect(page.getByRole('status')).toContainText('体验已完成');
  await page.getByRole('button',{name:'留下云海记忆',exact:true}).click();await expect(page.locator('.story-preview-body h2')).toHaveText('结局：云海记忆');
@@ -28,7 +30,7 @@ test('模型返回坏图不会创建，确认时改坏连接也会明确阻止',
  await page.getByRole('button',{name:'新建作品',exact:true}).click();await page.getByRole('button',{name:'互动影片',exact:true}).click();const dialog=page.getByRole('dialog',{name:'创建互动影片'});
  await dialog.getByLabel('体验流程',{exact:false}).fill('候云，择路，云海和石刻两个结局');await page.getByRole('button',{name:'生成节点草稿',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('不同去向');await expect(page.locator('.creation-node')).toHaveCount(0);
  bad=false;await page.getByRole('button',{name:'生成节点草稿',exact:true}).click();await expect(page.locator('.creation-node')).toHaveCount(6);
- await dialog.getByLabel('择路后续节点',{exact:true}).last().selectOption('east');await expect(dialog.getByRole('alert')).toContainText('不同去向');await expect(page.getByRole('button',{name:'创建并进入节点画布',exact:true})).toBeDisabled();
+ await dialog.getByLabel('择路后续节点',{exact:true}).last().selectOption('east');await expect(dialog.getByRole('alert')).toContainText('未连接到开始节点');await expect(page.getByRole('button',{name:'创建并进入节点画布',exact:true})).toBeDisabled();
 });
 
 test('Agent 确认离开再继续任务保留节点、连线与素材编辑，不重复请求模型',async({page})=>{

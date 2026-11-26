@@ -1,1 +1,11 @@
 .background-composer{display:grid;gap:12px}.background-composer-preview{aspect-ratio:16/9;overflow:hidden;border:1px solid var(--border,#e4e4e7);border-radius:10px;background:#f3f4f6}.background-composer-preview>div{height:100%}.background-composer-empty{display:grid;place-items:center;color:#71717a}.background-composer textarea{width:100%;resize:vertical;border:1px solid #d4d4d8;border-radius:8px;padding:12px;font:inherit;line-height:1.6;min-height:100px}.background-composer label{font-weight:600}.background-composer p{margin:0;font-size:12px;line-height:1.6;color:#71717a}.background-versions{display:flex;gap:8px;flex-wrap:wrap}.background-versions [aria-pressed=true]{border-color:#18181b;background:#f0f0f2}.background-generation-actions{display:flex;justify-content:space-between;align-items:center;gap:20px}.background-generation-actions small{color:#71717a}.background-generation-error{padding:12px;background:#fff6f6;border:1px solid #fecaca;border-radius:8px;display:grid;gap:8px}.background-generation-error .btn{justify-self:start}
+
+.exhibit-background-comparison {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--zc-border);
+}
+.exhibit-background-comparison > [role="status"] { margin-right: auto; font-size: 13px; }

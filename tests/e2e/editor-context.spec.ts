@@ -18,7 +18,7 @@ test('编辑器针对选中组件连续修改，刷新保留记录，撤销不�
 });
 test('设计风格无不改变画面，运行预览和独立预览返回保留编辑视角',async({page})=>{
  await openEditor(page);await page.locator('.node-hitbox').nth(1).click();await page.getByTitle('放大',{exact:true}).click();const zoom=await page.locator('.zoom-readout').innerText();const selected=await page.locator('.node-hitbox.selected').count();
- await page.getByRole('button',{name:'运行预览',exact:true}).first().click();await page.getByRole('button',{name:/返回编辑/}).click();await expect(page.locator('.zoom-readout')).toHaveText(zoom);expect(await page.locator('.node-hitbox.selected').count()).toBe(selected);
+ await page.getByRole('button',{name:'预览',exact:true}).first().click();await page.getByRole('button',{name:/返回编辑/}).click();await expect(page.locator('.zoom-readout')).toHaveText(zoom);expect(await page.locator('.node-hitbox.selected').count()).toBe(selected);
  const before=await currentWork(page);await page.locator('.editor-system-trigger').click();await page.locator('.editor-system-menu').getByRole('button',{name:'无',exact:true}).click();await expect.poll(async()=>(await currentWork(page)).styleId).toBe('');expect((await currentWork(page)).pages).toEqual(before.pages);
  await page.goto('/#/preview/work-1');await page.getByRole('button',{name:'编辑展项',exact:true}).click();await expect(page.locator('.zoom-readout')).toHaveText(zoom);expect(await page.locator('.node-hitbox.selected').count()).toBe(selected);
 });

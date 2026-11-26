@@ -20,7 +20,7 @@ test('新建智能演示自动匹配技能，正文完整进入实际请求并�
  await dialog.getByRole('button',{name:'生成大纲',exact:true}).click();await expect(dialog.getByLabel('第1页正文要点',{exact:true})).toHaveValue('模拟企业资料');
  expect(payload).toContain('演示正文末尾标记');expect(payload).not.toContain('社区未添加技能不得自动调用');expect(payload).not.toContain('无关技能不得调用');
  await expect(dialog.getByText('本次参考技能：企业智能演示编排',{exact:true})).toBeVisible();
- await dialog.getByRole('button',{name:'创建并进入编辑器',exact:true}).click();await expect(page).toHaveURL(/#\/presentations\//);
+ await dialog.getByRole('button',{name:'开始生成',exact:true}).click();await expect(page).toHaveURL(/#\/presentations\//);
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.works[0].creationPackage.skillIds)).toEqual(['auto-slides']);
 });
 

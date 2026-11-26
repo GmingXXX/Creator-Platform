@@ -34,7 +34,7 @@ for (const scenario of scenarios) {
       await page.getByLabel('你想讲述什么？', { exact: true }).fill(scenario.title);
       await page.getByLabel('生成模型', {exact:true}).selectOption('demo');
       await page.getByRole('button', { name: '生成大纲', exact: true }).click();
-      await page.getByRole('button', { name: '创建并进入编辑器', exact: true }).click();
+      await page.getByRole('button', { name: '开始生成', exact: true }).click();
     }
     }
     await expect(page).toHaveURL(new RegExp(`#/${scenario.route}/`));
@@ -42,7 +42,7 @@ for (const scenario of scenarios) {
     const created = (await readState(page)).works.find(work => work.title === scenario.title)!;
     expect(created.kind).toBe(scenario.kind);
     await page.getByRole('button', { name: '保存', exact: true }).click();
-    await page.getByRole('button', { name: '查看作品', exact: true }).click();
+    await page.getByRole('button', { name: '返回', exact: true }).click();
     await expect(page).toHaveURL(/#\/projects/);
     await page.getByRole('button', { name: `打开${scenario.title}`, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`#/${scenario.route}/${created.id}$`));
@@ -56,7 +56,7 @@ for (const scenario of scenarios) {
     await expect(page.getByLabel(scenario.detailField, { exact: true })).toHaveValue(scenario.detail);
     const state = await readState(page);
     expect(state.assets.filter(asset => asset.sourceWorkId === created.id || asset.workSnapshot?.id === created.id)).toEqual([]);
-    await page.getByRole('button', { name: '查看作品', exact: true }).click();
+    await page.getByRole('button', { name: '返回', exact: true }).click();
     await expect(page.getByRole('button',{name:`打开${finalTitle}`,exact:true})).toBeVisible();
     await expect(page.getByTestId('project-category-filter').getByRole('button',{name:scenario.kind==='story'?'互动影片':'智能演示',exact:true})).toHaveClass(/active/);
     expect(errors).toEqual([]);

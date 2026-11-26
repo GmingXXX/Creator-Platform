@@ -1,3 +1,4 @@
+import {mapPhotoTemplates} from './story-photo';
 import type {Asset, Work} from './types';
 import {assetAvailableForInsertion} from './asset-access';
 
@@ -26,6 +27,10 @@ export function adoptWorkResources(work:Work,assets:Asset[],workspaceId:string,a
     const source=matches.find(asset=>asset.id===id)||matches.find(asset=>!asset.public&&asset.workspaceId===workspaceId)||matches[0];
     return source?adopt(source.id,workspaceId):undefined;
   };
+  const track=(t:Work['storyMusic'])=>{
+    if(!t)return;
+    const pinned=resolve(t.src,t.assetId,['audio']);return pinned?{...t,assetId:pinned.id}:t;
+  };
   const coverMatches=eligible.filter(asset=>asset.kind==='image'||asset.kind==='video').filter(asset=>asset.src===work.cover||asset.preview===work.cover);
   const coverSource=work.coverAssetId?coverMatches.find(asset=>asset.id===work.coverAssetId):coverMatches[0];
   if(work.coverAssetId&&!coverSource)throw new Error('封面素材已不可用，请重新选择');
@@ -34,7 +39,7 @@ export function adoptWorkResources(work:Work,assets:Asset[],workspaceId:string,a
   const packageSource=source?adopt(source.id,workspaceId):undefined;
   const pack=work.creationPackage?{...structuredClone(work.creationPackage),...(packageSource?{sourceId:packageSource.id}:{}),
     files:work.creationPackage.files.map(file=>{resolve(file.src);return {...file};})}:undefined;
-  return {...work,...(cover?{coverAssetId:cover.id}:{}),...(pack?{creationPackage:pack}:{}),pages:work.pages.map(page=>{
+  return {...work,...(work.storyMusic?{storyMusic:track(work.storyMusic)}:{}),...(cover?{coverAssetId:cover.id}:{}),...(pack?{creationPackage:pack}:{}),pages:work.pages.map(page=>{
     const background=resolve(page.backgroundImage,page.backgroundAssetId,['image']);
     return {...page,...(background?{backgroundAssetId:background.id}:{}),nodes:page.nodes.map(node=>{
       const asset=resolve(node.src,node.assetId,[node.type]);
@@ -43,6 +48,6 @@ export function adoptWorkResources(work:Work,assets:Asset[],workspaceId:string,a
       })}:{})};
     })};
   }),...(work.shots?{shots:work.shots.map(shot=>{const asset=resolve(shot.src,shot.assetId,['image','video']);return asset?{...shot,assetId:asset.id}:shot;})}:{}),
-    ...(work.storyNodes?{storyNodes:work.storyNodes.map(node=>{const asset=resolve(node.media,node.mediaAssetId,['image','video','html']);return asset?{...node,mediaAssetId:asset.id}:node;})}:{}),
+    ...(work.storyNodes?{storyNodes:work.storyNodes.map(node=>{const asset=resolve(node.media,node.mediaAssetId,['image','video','html']);return {...node,...(node.photo?{photo:mapPhotoTemplates(node.photo,(t,kind)=>{const asset=resolve(t.src,t.assetId,[kind]);return asset?{...t,assetId:asset.id,src:asset.src,name:asset.name}:t;})}:{}),...(node.sound?{sound:{...node.sound,music:track(node.sound.music),narration:track(node.sound.narration)}}:{}),...(asset?{mediaAssetId:asset.id}:{}),...(node.layers?{layers:node.layers.map(layer=>{const dependency=resolve(layer.src,layer.assetId,[layer.kind]);return dependency?{...layer,assetId:dependency.id}:layer;})}:{})};})}:{}),
   };
 }

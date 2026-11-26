@@ -1,3 +1,4 @@
+import {pluginEditorPath} from '../../domain/creation-plugins';
 import type { Asset, DesignSystem, SceneNode, Skill, Work } from '../../domain/types';
 import {getWorkDisplayForm} from '../../domain/project-taxonomy';
 import { assetAvailableForInsertion } from '../../domain/asset-access';
@@ -7,7 +8,7 @@ export const kindLabels: Record<string,string> = {exhibit:'交互页面',present
 export const sourceLabels: Record<string,string> = {uploaded:'本地上传',generated:'智能生成',community:'社区复用',builtin:'内置素材'};
 export const statusLabels: Record<string,string> = {pending:'待审核',approved:'已通过',rejected:'已退回',withdrawn:'已撤回'};
 export function workRoute(work: Work) {
- return `${work.kind==='story'?'/dream':work.kind==='presentation'?'/presentations':work.kind==='video'?'/video':'/editor'}/${work.id}`;
+ return work.kind==='video'?`/video/${work.id}`:pluginEditorPath(work.kind||'exhibit',work.id);
 }
 export function assetPreviewWork(asset:Asset, works:Work[]):Work|undefined {
  // A published material always renders its reviewed snapshot, never a private source.

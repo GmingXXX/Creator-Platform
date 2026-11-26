@@ -30,14 +30,16 @@ for(const kind of ['presentation','story'] as const)test(`${kind}编辑器投稿
  expect(snapshot?.title).toBe(title);expect(snapshot?.kind).toBe(kind);
  if(kind==='story')expect(snapshot.storyNodes.length).toBeGreaterThan(0);else expect(snapshot.pages.length).toBeGreaterThan(0);
 });
-for(const route of ['presentations/work-4','dream/work-6'])test(`${route}阶段切换保留本地修改且工具栏可见`,async({page})=>{
- await login(page);await page.setViewportSize({width:1280,height:800});await page.goto(`/#/${route}`);
- const label=route.startsWith('presentations')?'演示名称':'作品名称';await page.getByLabel(label,{exact:true}).fill('阶段切换保留修改');
- await page.getByLabel('制作阶段',{exact:true}).click();await page.getByRole('button',{name:/正式交付/}).click();
- await expect(page.getByLabel(label,{exact:true})).toHaveValue('阶段切换保留修改');
+for(const route of ['presentations/work-4','dream/work-6'])test(`${route}交付检查随当前修改保存，制作阶段无需切换`,async({page})=>{
+ await login(page);await page.setViewportSize({width:1280,height:800});await page.goto('/#/'+route);
+ const story=route.startsWith('dream');
+ const title=page.getByLabel(story?'作品名称':'演示名称',{exact:true});
+ await title.fill('本次交付检查');await expect(page.getByLabel('制作阶段',{exact:true})).toHaveCount(0);
+ if(story)await page.getByRole('button',{name:'导出',exact:true}).click();
+ await page.getByRole('button',{name:'交付检查',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'交付检查',exact:true});await dialog.getByRole('checkbox').first().check();await dialog.getByRole('button',{name:'保存检查记录'}).click();
+ if(story)await page.getByRole('dialog',{name:'导出互动影片'}).getByRole('button',{name:'关闭对话框'}).click();
  await page.getByRole('button',{name:'保存',exact:true}).click();
- await page.getByRole('button',{name:/交付检查/}).click();const dialog=page.getByRole('dialog',{name:'交付检查'});await dialog.getByRole('checkbox').first().check();await dialog.getByRole('button',{name:'保存检查记录'}).click();await page.getByRole('button',{name:'保存',exact:true}).click();
- await expect(page.getByRole('button',{name:/交付检查 1\//})).toBeVisible();
+ await expect.poll(()=>page.evaluate(id=>{const w=JSON.parse(localStorage.getItem('zhichuang-studio-v1')!).state.works.find((v:any)=>v.id===id);return [w.title,w.deliveryReview?.checks,w.deliveryReview?.revision===w.revision]},route.split('/')[1])).toEqual(['本次交付检查',['facts'],true]);
  const bounds=await page.locator('.studio-top-actions').boundingBox();expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(1280);
- await page.screenshot({path:`/tmp/studio-${route.split('/')[0]}-toolbar.png`});
 });

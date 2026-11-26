@@ -1,0 +1,85 @@
+/* Authoring chrome. Authored scene elements, slide objects and media keep their own paints. */
+:root[data-theme] :is(.btn-primary,.composer-send:not(:disabled),.voice-input-panel .voice-submit) {
+  background: var(--zc-action);
+  color: var(--zc-action-text);
+  border-color: transparent;
+}
+:root[data-theme] :is(.btn-primary,.composer-send,.voice-input-panel .voice-submit):enabled:hover {
+  background: var(--zc-action-hover);
+  color: var(--zc-action-text);
+}
+:root[data-theme] .btn-secondary {
+  color: var(--zc-text);
+  background: var(--zc-control);
+  border-color: var(--zc-border-strong);
+}
+:root[data-theme] :is(.sidebar-toggle,.editor-home-logo,.studio-home-logo) {
+  color: var(--zc-muted);
+}
+:root[data-theme] :is(
+  .btn-secondary,.btn-ghost,.sidebar-toggle,.editor-home-logo,.studio-home-logo,
+  .studio-back,.editor-system-menu > button,.selection-actions button,
+  .studio-new-card,.video-shot-list > button,.story-node-library > button,
+  .story-floating-tools button,.story-flow-actions button,.story-routes button:not(.btn),
+  .reference-source-preview,.material-picker-card,.res-upload-zone,.project-category-filter button
+):enabled:hover {
+  color: var(--zc-text);
+  background: var(--zc-control-hover);
+}
+:root[data-theme] :is(.video-shot-list > button.active,.project-category-filter button.active) {
+  background: var(--zc-control-selected);
+  color: var(--zc-text);
+}
+:root[data-theme] :is(.video-shot-list > button.active,.project-category-filter button.active):hover {
+  background: var(--zc-control-selected);
+  color: var(--zc-text);
+}
+:root[data-theme] :is(.editor-toolbar,.studio-topbar) {
+  background-color: var(--zc-surface);
+  border-color: var(--zc-border);
+}
+:root[data-theme] .recent-entry:is(:hover,:focus-within) {
+  background: var(--zc-control-hover);
+}
+:root[data-theme] .recent-delete {
+  color: var(--zc-muted);
+  background: var(--zc-surface);
+}
+:root[data-theme] :is(.btn-danger,.recent-delete):enabled:hover {
+  background: var(--zc-danger-hover);
+  color: var(--zc-danger-text);
+}
+:root[data-theme] .btn:disabled {
+  color: var(--zc-muted);
+  background: var(--zc-control);
+  border-color: var(--zc-border);
+  opacity: .62;
+}
+:root[data-theme] .btn-ghost:disabled {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* A near-opaque tint keeps menus readable over a bright slide or a dark thumbnail. */
+:root[data-theme] :is(.modal,.popover,.dropdown-menu,.story-floating-tools,.story-flow-actions,.canvas-float-tools) {
+  background: var(--zc-overlay);
+  color: var(--zc-text);
+  border-color: var(--zc-border-strong);
+  backdrop-filter: blur(12px);
+}
+:root[data-theme] :is(.res-review-role,.search-input,.res-upload-zone) {
+  background-color: var(--zc-surface);
+  color: var(--zc-text);
+}
+:root[data-theme] .story-flow-wrap .react-flow__attribution {
+  background: var(--zc-overlay);
+}
+:root[data-theme] .story-flow-wrap .react-flow__attribution a {
+  color: var(--zc-muted);
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-theme] :is(.modal,.popover,.dropdown-menu,.story-floating-tools,.story-flow-actions,.canvas-float-tools) {
+    background: var(--zc-surface);
+    backdrop-filter: none;
+  }
+}

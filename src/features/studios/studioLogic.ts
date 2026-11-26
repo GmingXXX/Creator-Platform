@@ -1,4 +1,8 @@
-import type { SceneNode, ScenePage, StoryEdge, StoryNode } from '../../domain/types';
+export {parseBranch,formatBranch} from '../../domain/story-events';
+import {storyMediaKind} from './creationLogic';
+import {parseBranch,eventConfigurationIssues,revealableStoryLayers} from '../../domain/story-events';
+import {endingReachabilityError} from '../../domain/story-canvas';
+import type { Asset, SceneNode, ScenePage, StoryEdge, StoryNode } from '../../domain/types';
 
 export function defaultStory(): {nodes:StoryNode[];edges:StoryEdge[]} {
  return {nodes:[
@@ -9,21 +13,22 @@ export function defaultStory(): {nodes:StoryNode[];edges:StoryEdge[]} {
   {id:'smart',type:'end',x:970,y:360,title:'结局 B · 智慧新生',text:'你抵达了智能制造中心。数据连接每一个环节，技术让更多想象成为现实。',media:'/media/technology.svg'},
  ],edges:[{id:'edge-start',source:'start',target:'intro',label:'开始体验'},{id:'edge-intro',source:'intro',target:'choice',label:'继续探索'},{id:'edge-green',source:'choice',target:'green',label:'探索绿色能源'},{id:'edge-smart',source:'choice',target:'smart',label:'探索智能制造'}]};
 }
-export function validateStory(nodes:StoryNode[],edges:StoryEdge[]):string[] {
+export function validateStory(nodes:StoryNode[],edges:StoryEdge[],assets:Asset[]=[]):string[] {
  const errors:string[]=[];const ids=new Set(nodes.map(n=>n.id));const starts=nodes.filter(n=>n.type==='start');
  if(starts.length!==1)errors.push('故事需要且只能有一个开始节点');
  if(!nodes.some(n=>n.type==='end'))errors.push('请添加至少一个结局节点');
- if(edges.some(e=>!ids.has(e.source)||!ids.has(e.target)))errors.push('存在失效连线，请重新连接');
+ if(edges.some(e=>!ids.has(e.source)||(!e.stay&&!ids.has(e.target))))errors.push('存在失效连线，请重新连接');
  for(const node of nodes){const outgoing=edges.filter(e=>e.source===node.id&&ids.has(e.target));
+  const rules=edges.filter(e=>e.source===node.id),media=node.media?storyMediaKind(node,assets):'';
+  const visible=revealableStoryLayers(node,rules,media);
+  for(const edge of rules)errors.push(...eventConfigurationIssues(node,edge,parseBranch(edge.label).condition,ids,media,visible));
   if(node.type==='choice'&&outgoing.length<2)errors.push(`「${node.title}」需要至少两个分支`);
   if(node.type!=='end'&&!outgoing.length)errors.push(`「${node.title}」未连接后续节点`);
   if(node.type==='end'&&outgoing.length)errors.push(`结局「${node.title}」不应连接后续节点`);
  }
  const reached=new Set<string>();const walk=(id:string)=>{if(reached.has(id))return;reached.add(id);edges.filter(e=>e.source===id&&ids.has(e.target)).forEach(e=>walk(e.target))};starts.forEach(s=>walk(s.id));
  if(nodes.some(n=>!reached.has(n.id)))errors.push('存在未连接到开始节点的内容');
- const visited=new Set<string>(),active=new Set<string>();
- const cycle=(id:string):boolean=>{if(active.has(id))return true;if(visited.has(id))return false;visited.add(id);active.add(id);const found=edges.filter(e=>e.source===id&&ids.has(e.target)).some(e=>cycle(e.target));active.delete(id);return found};
- if(nodes.some(n=>cycle(n.id)))errors.push('检测到循环连接，请让每条路径通往结局');
+ const noEnding=endingReachabilityError(nodes,edges);if(noEnding)errors.push(noEnding);
  return [...new Set(errors)];
 }
 export function nextStoryNode(nodes:StoryNode[],edges:StoryEdge[],id:string,edgeId?:string):StoryNode|undefined {
@@ -51,6 +56,4 @@ export function makePresentationPages(title:string,styleId:string,titles?:string
  });
 }
 
-export function parseBranch(label:string):{label:string;condition:string}{const parts=label.split('\n[条件] ');return {label:parts[0],condition:parts[1]||'any'}};
-export function formatBranch(label:string,condition:string):string{return condition==='any'?label:`${label}\n[条件] ${condition}`;}
 export function isBranchAvailable(label:string,preference:string):boolean {const {condition}=parseBranch(label);return condition==='any'||condition===preference;}

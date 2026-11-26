@@ -1,3 +1,4 @@
+import {availableCreationPlugins,useCreationConfig} from '../domain/creation-plugins';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight, FilePlus2, LayoutTemplate, MousePointer2, Presentation, Clapperboard } from 'lucide-react';
@@ -21,6 +22,8 @@ export function NewExhibitDialog({open,onClose}:{open:boolean;onClose:()=>void})
  const [purposes,setPurposes]=useState<string[]>([]);
  const [resolution,setResolution]=useState('1920×1080');
  const [width,setWidth]=useState(1920),[height,setHeight]=useState(1080),[error,setError]=useState('');
+ const workspaceId=useStudio(state=>state.activeWorkspaceId),pluginConfig=useCreationConfig();
+ const plugins=availableCreationPlugins(workspaceId,pluginConfig);
  const createWork=useStudio(state=>state.createWork),navigate=useNavigate();
  useEffect(()=>{if(!open){setStep('category');setError('');setSession(value=>value+1);}},[open]);
  const close=()=>onClose();
@@ -41,9 +44,8 @@ export function NewExhibitDialog({open,onClose}:{open:boolean;onClose:()=>void})
  const footer=step==='category'?undefined:<><Button variant="ghost" onClick={()=>{setStep(step==='canvas'?'interactive':'category');setError('');}}><ArrowLeft/>返回上一步</Button>{step==='canvas'&&<Button variant="primary" onClick={create}>创建作品<ArrowUpRight/></Button>}</>;
  return <><PresentationCreationDialog key={`presentation-${session}`} open={open&&step==='presentation'} onClose={close} onBack={()=>setStep('category')} keepDraftOnClose/><StoryCreationDialog key={`story-${session}`} open={open&&step==='story'} onClose={close} onBack={()=>setStep('category')} keepDraftOnClose/><Modal open={open&&!isStudio} onClose={close} title={titles[dialogStep]} description={descriptions[dialogStep]} wide={step!=='canvas'} footer={footer}>
   {step==='category'?<div className="project-creation-kinds">
-   <button aria-label="交互页面" onClick={()=>setStep('interactive')}><span className="project-creation-icon"><MousePointer2 size={23}/></span><strong>交互页面</strong><p>制作可点击、浏览与探索的展示内容</p><span className="project-creation-hint">页面、组件与交互<ArrowUpRight size={16}/></span></button>
-   <button aria-label="智能演示" onClick={()=>setStep('presentation')}><span className="project-creation-icon"><Presentation size={23}/></span><strong>智能演示</strong><p>把资料变成会演示、会讲解、能问答的动态幻灯片</p><span className="project-creation-hint">动态播放、自主讲解与智能问答<ArrowUpRight size={16}/></span></button>
-   <button aria-label="互动影片" onClick={()=>setStep('story')}><span className="project-creation-icon"><Clapperboard size={23}/></span><strong>互动影片</strong><p>让观众参与选择，探索故事的不同结局</p><span className="project-creation-hint">场景、节点与分支<ArrowUpRight size={16}/></span></button>
+   {plugins.map(plugin=>{const Icon={exhibit:MousePointer2,presentation:Presentation,story:Clapperboard}[plugin.id];return <button key={plugin.id} aria-label={plugin.name} onClick={()=>setStep(plugin.id==='exhibit'?'interactive':plugin.id)}><span className="project-creation-icon"><Icon size={23}/></span><strong>{plugin.name}</strong><p>{plugin.description}</p><span className="project-creation-hint">{plugin.capabilities}<ArrowUpRight size={16}/></span></button>;})}
+   {!plugins.length&&<p>当前空间尚未启用创作工具，请联系负责人。</p>}
   </div>:step==='interactive'?<div className="creation-options">
    <button onClick={()=>setStep('canvas')}><div className="blank-canvas-illustration"><div><FilePlus2 size={26}/><span>你的下一件作品</span></div></div><div className="creation-option-copy"><FilePlus2/><span><strong>从空白画布新建</strong><small>自由搭建内容、组件与交互</small></span><ArrowUpRight/></div></button>
    <button onClick={()=>enter('/community?tab=templates&category=interactive')}><Artwork type="timeline" styleId="industrial" title="企业发展大事记"/><div className="creation-option-copy"><LayoutTemplate/><span><strong>从模板新建</strong><small>按展示内容寻找合适的交互页面</small></span><ArrowUpRight/></div></button>

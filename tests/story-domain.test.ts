@@ -15,9 +15,9 @@ describe('story graph', () => {
     expect(validateStory(nodes,[...edges,{id:'broken',source:'intro',target:'missing',label:''}]).some(e=>e.includes('失效'))).toBe(true);
     expect(validateStory(nodes,edges.filter(e=>e.source!=='intro')).some(e=>e.includes('未连接'))).toBe(true);
   });
-  it('rejects cycles and a branch with only one outgoing choice', () => {
+  it('rejects outgoing links from endings and incomplete legacy choice nodes', () => {
     const {nodes,edges}=defaultStory();
-    expect(validateStory(nodes,[...edges,{id:'cycle',source:'green',target:'intro',label:''}]).some(e=>e.includes('循环'))).toBe(true);
+    expect(validateStory(nodes,[...edges,{id:'cycle',source:'green',target:'intro',label:''}]).some(e=>e.includes('不应连接'))).toBe(true);
     expect(validateStory(nodes,edges.filter(e=>e.id!=='edge-smart')).some(e=>e.includes('至少两个'))).toBe(true);
   });
   it('never follows an unrelated or missing edge', () => {

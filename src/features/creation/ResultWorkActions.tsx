@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {WorkStageControl} from './ProductionStageControl';
+import {DeliveryReview} from '../editor/ProjectAppearance';
 import {ArrowUpRight,Play,Save} from 'lucide-react';
 import {Button,toast} from '../../components/ui';
 import {useStudio} from '../../domain/store';
@@ -21,7 +21,7 @@ export function ResultWorkActions({work,onOpen}:{work:Work;onOpen:(destination:s
   }catch(error){toast(error instanceof Error?error.message:'保存失败，请重试。',true);}
  };
  return <>
-  <WorkStageControl work={work} disabled={!canSave} onChange={next=>{try{useStudio.getState().saveWork(next);}catch(error){toast(error instanceof Error?error.message:'无法修改制作阶段',true);}}}/>
+  <DeliveryReview work={work} disabled={!canSave} onChange={next=>{try{useStudio.getState().saveWork(next);}catch(error){toast(error instanceof Error?error.message:'无法保存交付检查',true);}}}/>
   <Button onClick={()=>onOpen(`/projects?category=${getProjectCategory(work)}`)}>前往作品库</Button>
   <Button onClick={()=>onOpen(`/preview/${work.id}`)}><Play size={15}/>运行预览</Button>
   <Button onClick={()=>onOpen(workRoute(work))}>继续编辑<ArrowUpRight size={15}/></Button>

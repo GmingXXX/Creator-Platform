@@ -1,3 +1,4 @@
+import {pluginDeniedReason} from './creation-plugins';
 import {taskWorkspaceContext} from './workspace-context';
 import {referenceContext,referencesFromPrompt,validateReferences} from './exhibit-references';
 import {assertAIWorkspaceWrite} from './workspace-ai-access';
@@ -111,6 +112,7 @@ export async function reviseWorkWithAI(workId:string,prompt:string,target:EditTa
  const initial=useStudio.getState(),work=initial.works.find(w=>w.id===workId&&!w.deletedAt);
  if(!work)fail('作品已不存在。');
  assertAIWorkspaceWrite(work.workspaceId);
+ const disabled=pluginDeniedReason(work.kind,work.workspaceId||'personal');if(disabled)fail(disabled);
  const model=modelOverride||work.aiModel||DEFAULT_EDIT_MODEL;
  if(model==='demo')fail('演示模式不会调用真实模型，请切换到 DeepSeek。');
  if(!/^deepseek-[a-z0-9-]+$/.test(model))fail('请选择支持的 DeepSeek 模型。');

@@ -3,7 +3,8 @@ import {createDraft} from './fixtures';
 import {uid} from './scenes';
 import {isWorkspace} from './workspaces';
 import {assertKnowledgeFieldAvailable,canManageKnowledgeBinding,createKnowledgeBinding} from './workspace-knowledge';
-import {normalizeMemberAccount,validateMemberRole,validateWorkspaceDetails,workspaceCanManage,type WorkspaceMember} from './workspace-management';
+import {canonicalMemberAccount} from './admin-management';
+import {matchingMemberships,primaryMembership,replaceMemberships,normalizeMemberAccount,validateMemberRole,validateWorkspaceDetails,workspaceCanManage,type WorkspaceMember} from './workspace-management';
 
 type Setter=(update:Partial<StudioStore>)=>void;
 export function createWorkspaceActions(set:Setter,get:()=>StudioStore):Pick<StudioStore,'createWorkspace'|'updateWorkspaceDetails'|'transferWorkspaceOwnership'|'inviteWorkspaceMember'|'changeWorkspaceMemberRole'|'removeWorkspaceMember'|'acceptWorkspaceInvitation'|'setWorkspaceActor'|'bindWorkspaceKnowledge'|'unbindWorkspaceKnowledge'> {
@@ -16,8 +17,9 @@ export function createWorkspaceActions(set:Setter,get:()=>StudioStore):Pick<Stud
  const findMember=(id:string,memberId:string)=>{
   const state=requireOwner(id),member=state.workspaceMembers[id]?.find(item=>item.id===memberId);
   if(!member)throw new Error('成员或邀请已不存在');
-  if(member.role==='owner')throw new Error('不能更改或移除空间负责人');
-  return {state,member};
+  const matches=matchingMemberships(state.workspaceMembers[id],member.account),primary=primaryMembership(matches)||member;
+  if(primary.role==='owner')throw new Error('不能更改或移除空间负责人');
+  return {state,member:primary,matches};
  };
  const saveMembers=(id:string,members:WorkspaceMember[])=>set({workspaceMembers:{...get().workspaceMembers,[id]:members}});
  return {
@@ -27,9 +29,13 @@ export function createWorkspaceActions(set:Setter,get:()=>StudioStore):Pick<Stud
    set({workspaces:state.workspaces.map(space=>space.id===id?{...space,...details}:space)});
   },
   transferWorkspaceOwnership:(id,memberId)=>{
-   const state=requireOwner(id),members=state.workspaceMembers[id],target=members.find(member=>member.id===memberId);
+   const state=requireOwner(id),members=state.workspaceMembers[id],selected=members.find(item=>item.id===memberId);
+   const matches=selected?matchingMemberships(members,selected.account):[],target=primaryMembership(matches);
    if(!target||target.status!=='member'||target.role==='owner')throw new Error('请选择已加入空间的其他成员');
-   set({workspaceSchemaVersion:2,workspaceMembers:{...state.workspaceMembers,[id]:members.map(member=>member.id===memberId?{...member,role:'owner'}:member.role==='owner'?{...member,role:'editor'}:member)}});
+   const previous=members.find(member=>member.role==='owner')!;
+   const demoted=replaceMemberships(members,matchingMemberships(members,previous.account),{...previous,role:'editor'});
+   const transferred=replaceMemberships(demoted,matches,{...target,account:canonicalMemberAccount(target.account),role:'owner'});
+   set({workspaceSchemaVersion:2,workspaceMembers:{...state.workspaceMembers,[id]:transferred}});
   },
   createWorkspace:input=>{
    const details=validateWorkspaceDetails(input),state=get();
@@ -51,22 +57,22 @@ export function createWorkspaceActions(set:Setter,get:()=>StudioStore):Pick<Stud
    set({workspaceKnowledge:Object.fromEntries(Object.entries(state.workspaceKnowledge).filter(([spaceId])=>spaceId!==id))});
   },
   inviteWorkspaceMember:(id,input,role)=>{
-   const state=requireOwner(id);validateMemberRole(role);const account=normalizeMemberAccount(input),members=state.workspaceMembers[id];
-   if(members.some(member=>member.account===account))throw new Error('该账号已在成员或邀请列表中');
+   const state=requireOwner(id);validateMemberRole(role);const account=canonicalMemberAccount(normalizeMemberAccount(input)),members=state.workspaceMembers[id];
+   if(matchingMemberships(members,account).length)throw new Error('该账号已在成员或邀请列表中');
    const member:WorkspaceMember={id:uid('member'),name:input.trim(),account,role,status:'invited'};
    saveMembers(id,[...members,member]);return member;
   },
   changeWorkspaceMemberRole:(id,memberId,role)=>{
-   const {state}=findMember(id,memberId);validateMemberRole(role);
-   saveMembers(id,state.workspaceMembers[id].map(member=>member.id===memberId?{...member,role}:member));
+   const {state,member,matches}=findMember(id,memberId);validateMemberRole(role);
+   saveMembers(id,replaceMemberships(state.workspaceMembers[id],matches,{...member,account:canonicalMemberAccount(member.account),role}));
   },
   removeWorkspaceMember:(id,memberId)=>{
-   const {state}=findMember(id,memberId);saveMembers(id,state.workspaceMembers[id].filter(member=>member.id!==memberId));
+   const {state,matches}=findMember(id,memberId);saveMembers(id,replaceMemberships(state.workspaceMembers[id],matches));
   },
   acceptWorkspaceInvitation:(id,memberId)=>{
-   const {state,member}=findMember(id,memberId);
+   const {state,member,matches}=findMember(id,memberId);
    if(member.status!=='invited')throw new Error('该成员已经加入空间');
-   saveMembers(id,state.workspaceMembers[id].map(item=>item.id===memberId?{...item,status:'member'}:item));
+   saveMembers(id,replaceMemberships(state.workspaceMembers[id],matches,{...member,account:canonicalMemberAccount(member.account),status:'member'}));
   },
   // Explicit local demonstration control, not an authentication or access-granting endpoint.
   setWorkspaceActor:(id,memberId)=>{

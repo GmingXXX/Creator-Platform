@@ -37,7 +37,7 @@ export function FishboneTimeline({node,interactive,onItemClick}:{node:SceneNode;
    <div className="fishbone-track">{(node.items||[]).map((item,index)=><div className={`fishbone-event ${index%2?'is-lower':'is-upper'}`} key={item.id}>
     <span className="fishbone-stem"/><span className="fishbone-dot"/>
     <strong className="fishbone-year" style={textRoleStyle(node,'title')}>{item.year||'日期待补'}</strong>
-    <button className="fishbone-card" type="button" tabIndex={interactive?0:-1} aria-label={`${item.year||''} ${item.title}`} onClick={event=>{event.stopPropagation();if(interactive)onItemClick(item);}}>
+    <button data-content-item={item.id} className="fishbone-card" type="button" tabIndex={interactive?0:-1} aria-label={`${item.year||''} ${item.title}`} onClick={event=>{event.stopPropagation();if(interactive)onItemClick(item);}}>
      <EventImage src={item.image} title={item.title}/><span className="fishbone-copy"><strong style={textRoleStyle(node,'title')}>{item.title}</strong><p style={textRoleStyle(node,'body')}>{item.description}</p><small>查看事件详情 ↗</small></span>
     </button>
    </div>)}</div>

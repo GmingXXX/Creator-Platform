@@ -1,4 +1,5 @@
 import { get, set } from 'idb-keyval';
+import {isWorkBackgroundSample} from './work-background';
 import { useEffect, useState } from 'react';
 import type { Asset, AssetKind, AssetMetadata } from './types';
 import { now, uid } from './scenes';
@@ -109,9 +110,12 @@ export async function readMediaBlob(src: string): Promise<Blob> {
         throw new Error('未找到本地素材，可能已清理浏览器数据。请重新上传。');
     return blob;
 }
+function permittedMediaUrl(src:string):boolean {
+    return !/^(javascript|vbscript|data):/i.test(src.trim()) || isWorkBackgroundSample(src);
+}
 export async function resolveMedia(src: string): Promise<string> {
     if (!src.startsWith('idb:')) {
-        if (/^(javascript|vbscript|data):/i.test(src.trim()))
+        if (!permittedMediaUrl(src))
             throw new Error('不支持此媒体地址。');
         return src;
     }
@@ -135,7 +139,7 @@ export function clearMediaCache(): void {
     pendingMedia.clear();
 }
 export function useMedia(src?: string): string {
-    const [resolved, setResolved] = useState(() => src?.startsWith('idb:') ? mediaCache.get(src) || '' : src || '');
+    const [resolved, setResolved] = useState(() => src?.startsWith('idb:') ? mediaCache.get(src) || '' : src && permittedMediaUrl(src) ? src : '');
     useEffect(() => {
         let active = true;
         if (!src) {
@@ -143,7 +147,7 @@ export function useMedia(src?: string): string {
             return;
         }
         if (!src.startsWith('idb:')) {
-            setResolved(/^(javascript|vbscript|data):/i.test(src.trim()) ? '' : src);
+            setResolved(permittedMediaUrl(src) ? src : '');
             return;
         }
         setResolved(mediaCache.get(src) || '');

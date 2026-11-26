@@ -1,3 +1,6 @@
+import {mapPhotoTemplates,collectStoryPhotoTemplates} from './story-photo';
+import {collectStoryAudio} from './story-audio';
+import {offlinePreviewLimits} from './offline-preview-limits';
 import JSZip from 'jszip';
 import type { Work } from './types';
 import { exportRuntime, exportStyles } from './export-runtime';
@@ -37,7 +40,7 @@ function validateWork(work: Work) {
 
 function mediaReferences(work: Work): string[] {
   const references = work.pages.flatMap(page => [page.backgroundImage, ...page.nodes.flatMap(node => [node.src, ...(node.items ?? []).map(item => item.image)])]);
-  return [...new Set([work.cover,...references, ...(work.shots ?? []).map(shot => shot.src), ...(work.storyNodes ?? []).map(node => node.media)].filter((src): src is string => Boolean(src)))];
+  return [...new Set([work.cover,...[...collectStoryAudio(work),...collectStoryPhotoTemplates(work)].map(t=>t.src),...references, ...(work.shots ?? []).map(shot => shot.src), ...(work.storyNodes ?? []).flatMap(node => [node.media,...(node.layers||[]).map(l=>l.src)])].filter((src): src is string => Boolean(src)))];
 }
 
 async function defaultLoadMedia(src: string, signal?: AbortSignal): Promise<Blob> {
@@ -116,7 +119,8 @@ async function validateEmbeddedDocument(blob: Blob, kind: string) {
 function rewriteMedia(work: Work, resources: Resource[]): Work {
   const paths = new Map(resources.map(item => [item.original, item.path]));
   const ref = (src: string | undefined) => src ? paths.get(src) ?? src : undefined;
-  return {...work, cover:ref(work.cover), pages: work.pages.map(page => ({...page, backgroundImage: ref(page.backgroundImage), nodes: page.nodes.map(node => ({...node, src: ref(node.src), items: node.items?.map(item => ({...item, image: ref(item.image)}))}))})), shots: work.shots?.map(shot => ({...shot, src: ref(shot.src)!})), storyNodes: work.storyNodes?.map(node => ({...node, media: ref(node.media)}))};
+  const track=(t:Work['storyMusic'])=>t&&{...t,src:ref(t.src)!};
+  return {...work, storyMusic:track(work.storyMusic), cover:ref(work.cover), pages: work.pages.map(page => ({...page, backgroundImage: ref(page.backgroundImage), nodes: page.nodes.map(node => ({...node, src: ref(node.src), items: node.items?.map(item => ({...item, image: ref(item.image)}))}))})), shots: work.shots?.map(shot => ({...shot, src: ref(shot.src)!})), storyNodes: work.storyNodes?.map(node => ({...node, media: ref(node.media),...(node.photo?{photo:mapPhotoTemplates(node.photo,t=>({...t,src:ref(t.src)!}))}:{}),sound:node.sound&&{...node.sound,music:track(node.sound.music),narration:track(node.sound.narration)},layers:node.layers?.map(layer=>({...layer,src:ref(layer.src)}))}))};
 }
 
 function makeManifest(work: Work, resources: Resource[], format: ExportFormat) {
@@ -156,7 +160,7 @@ export async function exportWork(input: Work, format: ExportFormat, options: Exp
     zip.file('index.html', makeHtml(work));
     zip.file('runtime.js', exportRuntime());
     zip.file('runtime.css', exportStyles);
-    zip.file('README.txt', `智创平台 · 管理平台运行包\n\n展项：${work.title}\n版本：${work.revision}\n分辨率：${work.width} × ${work.height}\n\n解压全部文件后，用桌面 Chrome、Edge 或 Safari 打开 index.html。引用的图片、视频、音频及自包含组件已存放在 assets 文件夹；页面浏览无需网络或服务端。所选系统字体由运行设备提供，未安装时按字体回退规则显示；没有嵌入第三方字库。首次播放声音/视频需点击交互，以符合浏览器媒体策略。\n\n下方可切换页面，右上角可全屏，右下角可测试已配置的语音口令。详情关闭后返回原页面。\n\n在线问答、语音识别和实时生成需要另接在线服务，不包含在此离线包中。管理平台导入协议仍需联调确认。\n\n此包为当前版本的演示运行快照，不包含编辑器。自包含 HTML 程序在隔离框架中运行，内部内容不会转换为画布组件；外部依赖和专业播放器功能需另行适配。\n`);
+    zip.file('README.txt', `智创平台 · 管理平台运行包\n\n展项：${work.title}\n版本：${work.revision}\n分辨率：${work.width} × ${work.height}\n\n解压全部文件后，用桌面 Chrome、Edge 或 Safari 打开 index.html。引用的图片、视频、音频及自包含组件已存放在 assets 文件夹；页面浏览无需网络或服务端。所选系统字体由运行设备提供，未安装时按字体回退规则显示；没有嵌入第三方字库。首次播放声音/视频需点击交互，以符合浏览器媒体策略。\n\n当前作品中请在编辑器运行预览核对的能力（离线播放器支持有限）：${offlinePreviewLimits(work).join('、')||'无'}。\n\n下方可切换页面，右上角可全屏，右下角可测试已配置的语音口令。详情关闭后返回原页面。\n\n在线问答、语音识别和实时生成需要另接在线服务，不包含在此离线包中。管理平台导入协议仍需联调确认。\n\n此包为当前版本的演示运行快照，不包含编辑器。自包含 HTML 程序在隔离框架中运行，内部内容不会转换为画布组件；外部依赖和专业播放器功能需另行适配。\n`);
   } else {
     zip.file('player-manifest.example.json', JSON.stringify({...manifest, sceneFile: 'scene.json', entryPage: work.pages[0].id}, null, 2));
     zip.file('README.txt', `智创平台 · 展项播放器离线包（协议示例）\n\n${work.title} / 版本 ${work.revision}\n\n协议示例，待播放器适配。本文件演示场景、版本、媒体与校验值的组织方式，不代表已兼容任何实际展项播放器。\n请由播放器开发人员依据实际协议确认配置结构。未包含专用播放器安装程序。\n`);

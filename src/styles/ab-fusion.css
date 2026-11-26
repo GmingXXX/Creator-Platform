@@ -5,11 +5,20 @@
 
 :root {
   /* Unified semantic tokens (light mode) */
-  --zc-bg: #fafafa;
-  --zc-canvas: #fafafa;
-  --zc-sidebar-bg: #f4f4f3;
-  --zc-surface: #ffffff;
-  --zc-surface-subtle: #f4f4f5;
+  --zc-bg: #f1f3f4;
+  --zc-canvas: var(--zc-bg);
+  --zc-sidebar-bg: #e9edef;
+  --zc-surface: #f4f5f6;
+  --zc-overlay: rgba(245, 246, 248, .96);
+  --zc-control: rgba(232, 235, 238, .7);
+  --zc-control-hover: rgba(216, 221, 226, .94);
+  --zc-control-selected: #d7dce1;
+  --zc-action: #34383e;
+  --zc-action-text: #f8f9fa;
+  --zc-action-hover: #252a30;
+  --zc-danger-text: #9f283c;
+  --zc-danger-hover: #f4dce0;
+  --zc-surface-subtle: #e8ebed;
   --zc-text: #18181b;
   --zc-muted: #66666e;
   --zc-border: rgba(24, 24, 27, 0.09);
@@ -21,6 +30,10 @@
   /* Bridge legacy base.css tokens to eliminate blue/gray split */
   --bg: var(--zc-canvas);
   --surface: var(--zc-surface);
+  --surface-hover: var(--zc-control-hover);
+  --panel: var(--zc-surface);
+  --text-muted: var(--zc-muted);
+  --text-secondary: var(--zc-muted);
   --border: var(--zc-border);
   --muted: var(--zc-muted);
   --text: var(--zc-text);
@@ -46,6 +59,15 @@
   --zc-canvas: #141414;
   --zc-sidebar-bg: #101011;
   --zc-surface: #1b1b1d;
+  --zc-overlay: rgba(34, 35, 38, .96);
+  --zc-control: rgba(51, 53, 58, .78);
+  --zc-control-hover: rgba(61, 64, 70, .96);
+  --zc-control-selected: #45494f;
+  --zc-action: #c4c8ce;
+  --zc-action-text: #202328;
+  --zc-action-hover: #d3d6db;
+  --zc-danger-text: #ffc2cc;
+  --zc-danger-hover: #562c39;
   --zc-surface-subtle: #222225;
   --zc-text: #ededef;
   --zc-muted: #9f9fa8;
@@ -57,6 +79,10 @@
 
   --bg: var(--zc-canvas);
   --surface: var(--zc-surface);
+  --surface-hover: var(--zc-control-hover);
+  --panel: var(--zc-surface);
+  --text-muted: var(--zc-muted);
+  --text-secondary: var(--zc-muted);
   --border: var(--zc-border);
   --muted: var(--zc-muted);
   --text: var(--zc-text);

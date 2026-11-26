@@ -18,11 +18,11 @@ test('上传资料真实进入大纲，正文和讲稿生成，PPTX保留内容�
  await page.getByRole('dialog').locator('input[type=file]').first().setInputFiles({name:'企业大纲.txt',mimeType:'text/plain',buffer:Buffer.from('星澜智造成立于2012年。2024年绿色产线升级，能耗降低12%。以上均为模拟数据。')});
  await expect(page.locator('.creation-source-file')).toContainText('已解析');
  await page.getByRole('button',{name:'生成大纲',exact:true}).click();await expect(page.getByLabel('第2页正文要点',{exact:true})).toHaveValue('2024年完成升级\n能耗降低12%');expect(requests[0]).toContain('以上均为模拟数据');
- await page.getByLabel('第2页正文要点',{exact:true}).fill('2024年完成升级\n能耗降低12%\n根据确认大纲编排');
- await page.getByRole('button',{name:'创建并进入编辑器',exact:true}).click();await expect(page).toHaveURL(/#\/presentations\//);
+ await page.getByRole('navigation',{name:'大纲页面'}).getByRole('button',{name:/^2\./}).click();await page.getByLabel('第2页正文要点',{exact:true}).fill('2024年完成升级\n能耗降低12%\n根据确认大纲编排');
+ await page.getByRole('button',{name:'开始生成',exact:true}).click();await expect(page).toHaveURL(/#\/presentations\//);
  await page.getByRole('button',{name:'导出',exact:true}).click();const download=page.waitForEvent('download');await page.getByRole('menuitem',{name:'PowerPoint（PPTX）',exact:true}).click();const result=await download,zip=await JSZip.loadAsync(await readFile((await result.path())!));expect(await zip.file('ppt/slides/slide2.xml')!.async('string')).toContain('根据确认大纲编排');expect(await zip.file('ppt/notesSlides/notesSlide2.xml')!.async('string')).toContain('百分之十二');
  await page.getByRole('tab',{name:'互动问答',exact:true}).click();await page.getByLabel('允许使用本作品上传的参考资料',{exact:true}).check();
- await page.getByRole('button',{name:'开始演示',exact:true}).click();await page.getByRole('button',{name:'开始讲解',exact:true}).click();await expect.poll(()=>speech.length).toBe(1);expect(speech[0]).toBe('欢迎来到星澜智造。');await expect(page.getByRole('button',{name:'暂停讲解',exact:true})).toBeVisible();await page.getByRole('button',{name:'暂停讲解',exact:true}).click();
+ await page.getByRole('button',{name:'预览',exact:true}).click();await page.getByRole('button',{name:'开始讲解',exact:true}).click();await expect.poll(()=>speech.length).toBe(1);expect(speech[0]).toBe('欢迎来到星澜智造。');await expect(page.getByRole('button',{name:'暂停讲解',exact:true})).toBeVisible();await page.getByRole('button',{name:'暂停讲解',exact:true}).click();
  await page.getByRole('button',{name:'提问',exact:true}).click();await page.getByLabel('演示追问',{exact:true}).fill('绿色产线能耗降低多少？');await page.getByRole('button',{name:'发送问题',exact:true}).click();await expect(page.locator('.player-answer')).toContainText('能耗降低 12%');expect(requests.at(-1)).toContain('以上均为模拟数据');expect(requests.at(-1)).toContain('根据确认大纲编排');
  await page.screenshot({path:'output/验收截图/real-presentation-qa.png'});
  await page.locator('.player-question-panel').getByRole('button',{name:'继续讲解',exact:true}).click();await expect(page.getByRole('button',{name:'暂停讲解',exact:true})).toBeVisible();expect(speech).toHaveLength(1);

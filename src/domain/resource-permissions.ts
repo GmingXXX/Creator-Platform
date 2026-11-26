@@ -1,3 +1,6 @@
+import {collectStoryPhotoTemplates} from './story-photo';
+import {collectStoryAudio} from './story-audio';
+import {isWorkBackgroundSample} from './work-background';
 import type {Asset, CreationPackage, Work} from './types';
 import {assetAvailableForAI, assetAvailableInSpace} from './asset-access';
 
@@ -21,9 +24,9 @@ function checkReference(src:string|undefined,id:string|undefined,context:Context
     return checkAsset(exact,context);
   }
   if(!src)return;
-  if(/^(?:javascript|vbscript|data):/i.test(src.trim()))return unavailable;
+  if(/^(?:javascript|vbscript|data):/i.test(src.trim())&&!isWorkBackgroundSample(src))return unavailable;
   const matches=context.assets.filter(asset=>asset.src===src||(preview&&asset.preview===src));
-  if(!matches.length)return src.startsWith('idb:')||src.startsWith('blob:')?unavailable:undefined;
+  if(!matches.length)return /^(idb|blob|data):/i.test(src)?unavailable:undefined;
   return matches.some(asset=>!checkAsset(asset,context))?undefined:unavailable;
 }
 
@@ -33,7 +36,7 @@ function checkWork(work:Work,context:Context):string|undefined {
     {src:page.backgroundImage,id:page.backgroundAssetId},
     ...page.nodes.flatMap(node=>[{src:node.src,id:node.assetId},...(node.items||[]).map(item=>({src:item.image,id:item.assetId}))]),
   ]);
-  references.push(...(work.shots||[]).map(shot=>({src:shot.src,id:shot.assetId})),...(work.storyNodes||[]).map(node=>({src:node.media,id:node.mediaAssetId})));
+  references.push(...[...collectStoryAudio(work),...collectStoryPhotoTemplates(work)].map(track=>({src:track.src,id:track.assetId})),...(work.shots||[]).map(shot=>({src:shot.src,id:shot.assetId})),...(work.storyNodes||[]).flatMap(node=>[{src:node.media,id:node.mediaAssetId},...(node.layers||[]).map(layer=>({src:layer.src,id:layer.assetId}))]));
   for(const reference of references){const error=checkReference(reference.src,reference.id,context);if(error)return error;}
   return work.creationPackage?checkPackage(work.creationPackage,context):undefined;
 }

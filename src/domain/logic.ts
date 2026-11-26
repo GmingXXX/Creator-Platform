@@ -1,3 +1,6 @@
+import {collectStoryPhotoTemplates} from './story-photo';
+import {mapConditionNode} from './story-events';
+import {collectStoryAudio} from './story-audio';
 import type {ExhibitReference} from './exhibit-references';
 import type { ExhibitType, Run, VoiceCommand, Work } from './types';
 import { now, uid, systems, resolutions } from './scenes';
@@ -29,7 +32,7 @@ export function cloneWork(source: Work, title = `${source.title} · 副本`): Wo
             node.commands?.forEach(x => map(x.id));
         }
     }
-    copy.storyNodes?.forEach(n => map(n.id));
+    copy.storyNodes?.forEach(n => {map(n.id);n.layers?.forEach(layer=>map(layer.id));});
     copy.storyEdges?.forEach(e => map(e.id));
     const ref = (id?: string) => id ? (ids.get(id) || id) : undefined;
     const workId=uid('work');
@@ -37,8 +40,8 @@ export function cloneWork(source: Work, title = `${source.title} · 副本`): Wo
     return {
         ...copy, references:ownReferences(copy.references),referenceHistory:ownReferences(copy.referenceHistory),referenceSnapshots:ownReferences(copy.referenceSnapshots),experience:undefined, ...(copy.creationPackage?{creationPackage:{...copy.creationPackage,references:ownReferences(copy.creationPackage.references),referenceHistory:ownReferences(copy.creationPackage.referenceHistory),experience:undefined}}:{}), id: workId, projectId: uid('project'), title, revision: 1, archived: false, createdAt: now(), updatedAt: now(), pages: copy.pages.map(p => ({ ...p, id: map(p.id), nodes: p.nodes.map(n => ({
                 ...n, id: map(n.id), items: n.items?.map(x => ({ ...x, id: map(x.id), parentId: ref(x.parentId) })), interactions: n.interactions?.map(x => ({ ...x, id: map(x.id), targetId: ref(x.targetId) })), commands: n.commands?.map(x => ({ ...x, id: map(x.id), targetId: ref(x.targetId) }))
-            })) })), storyNodes: copy.storyNodes?.map(n => ({ ...n, id: map(n.id) })), storyEdges: copy.storyEdges?.map(e => ({
-            ...e, id: map(e.id), source: map(e.source), target: map(e.target)
+            })) })), storyNodes: copy.storyNodes?.map(n => ({ ...n, id: map(n.id),...(n.layers?{layers:n.layers.map(l=>({...l,id:map(l.id)}))}:{}) })), storyEdges: copy.storyEdges?.map(e => ({
+            ...e, label:mapConditionNode(e.label,ids), id: map(e.id), source: map(e.source), target: e.target?map(e.target):'', layerId:ref(e.layerId),effects:e.effects?.map(f=>({...f,id:map(f.id),layerId:map(f.layerId)}))
         })), shots: copy.shots?.map(x => ({ ...x, id: uid('shot') }))
     };
 }
@@ -82,7 +85,7 @@ export function validateCommands(commands: VoiceCommand[]): string {
 }
 export function collectAssetSources(work: Work): string[] {
     const sources = work.pages.flatMap(p => [p.backgroundImage, ...p.nodes.flatMap(n => [n.src, ...(n.items || []).map(x => x.image)])]);
-    sources.push(work.cover,...(work.shots || []).map(s => s.src), ...(work.storyNodes || []).map(n => n.media));
+    sources.push(work.cover,...[...collectStoryAudio(work),...collectStoryPhotoTemplates(work)].map(t=>t.src),...(work.shots || []).map(s => s.src), ...(work.storyNodes || []).flatMap(n => [n.media,...(n.layers||[]).map(l=>l.src)]));
     return [...new Set(sources.filter((x): x is string => !!x))];
 }
 

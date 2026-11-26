@@ -1,3 +1,4 @@
+import {pluginDeniedReason,registeredPlugin,taskLimitReached} from './creation-plugins';
 import {canAdmin,catalogIsHidden} from './admin-management';
 import {productionStagePrompt,productionStageOf} from './production-stage';
 import {clarificationNeeded,confirmedIntent,creationPrompt} from './intent-clarification';
@@ -23,7 +24,7 @@ import { reviseScene } from './conversation';
 import { isWorkspace, workspaceOf } from './workspaces';
 import {workspaceCanEdit,workspaceRole,normalizeWorkspaceState} from './workspace-management';
 import {createWorkspaceActions} from './workspace-actions';
-import {createWorkspaceLifecycleActions} from './workspace-lifecycle';
+import {createWorkspaceLifecycleActions,removeCreationDraftCaches} from './workspace-lifecycle';
 import {isProjectWork, reconcileWorkOutputs, snapshotMaterialAsset} from './work-outputs';
 import {assetAvailableForAI, assetAvailableForInsertion, assetAvailableInSpace} from './asset-access';
 import {getAssetMetadata, validBusinessMetadata} from './asset-metadata';
@@ -101,6 +102,8 @@ export const useStudio = create<StudioStore>()(persist((set, get) => ({
     },
     createWork: options => {
         requireWorkspaceWrite(get(),options.workspaceId||get().activeWorkspaceId);
+        const disabled=pluginDeniedReason(options.kind||'exhibit',options.workspaceId||get().activeWorkspaceId);
+        if(disabled)throw new Error(disabled);
         validateWork(options);
         const work = {...createSceneWork({ ...options, styleId:options.styleId || '', title: options.title.trim(), blank: !options.kind || options.kind === 'exhibit' }),displayForm:options.displayForm,contentPurposes:options.contentPurposes ? getWorkPurposes({title:options.title,type:options.type,contentPurposes:options.contentPurposes}) : [],workspaceId:options.workspaceId || get().activeWorkspaceId};
         set(s => reconcileWorkOutputs({...s, works: [work, ...s.works]}));
@@ -111,7 +114,7 @@ export const useStudio = create<StudioStore>()(persist((set, get) => ({
         const template = get().templates.find(x => x.id === id);
         if (!template||catalogIsHidden('template',id)){set({creationError:'模板已不可用，请刷新后重新选择。'});return;}
         const workspaceId=get().activeWorkspaceId;
-        const error=workDependencyError(get().assets,template.work,workspaceId);
+        const error=pluginDeniedReason(template.work.kind,workspaceId)||workDependencyError(get().assets,template.work,workspaceId);
         if(error){set({creationError:error});return;}
         const cloned={...cloneWork(template.work, `${template.title} · 我的创作`),workspaceId,deletedAt:undefined};
         const work=adoptWorkResources(cloned,get().assets,workspaceId,get().adoptAsset);
@@ -251,28 +254,37 @@ export const useStudio = create<StudioStore>()(persist((set, get) => ({
         set({creationError:undefined});
         return state.newDraft({workspaceId:state.activeWorkspaceId,text:`参考「${adopted.name}」的风格与制作方法，`,model:current?.model||'deepseek-flash',styleId:pack.styleId||current?.styleId||'',skillIds:[...pack.skillIds],reference:{...structuredClone(pack),sourceId:adopted.id}});
     },
-    startRun: () => {
-        const s = get(), draft = s.drafts.find(x => x.id === s.activeDraftId);
+    startRun: (pluginId,sessionDraft,assetKind) => {
+        const s = get(), draft = sessionDraft ?? s.drafts.find(x => x.id === s.activeDraftId);
         if (!draft?.text.trim() || !workspaceCanEdit(s,workspaceOf(draft)))
             return;
         const intent=confirmedIntent(draft);
-        if(clarificationNeeded(draft.text)&&!intent){set({creationError:'请先确认展示方式，再开始创作。'});return;}
-        const basePrompt=creationPrompt(draft),outputKind=intent||resolveIntent(basePrompt).outputKind,prompt=productionStagePrompt(basePrompt,draft.productionStage);
+        if(assetKind&&(pluginId||!['image','video','html','component'].includes(assetKind))){set({creationError:'请选择单一有效的创作类型。'});return;}
+        if(!pluginId&&!assetKind&&clarificationNeeded(draft.text)&&!intent){set({creationError:'请先确认展示方式，再开始创作。'});return;}
+        const basePrompt=creationPrompt(draft),outputKind=assetKind||pluginId||intent||resolveIntent(basePrompt).outputKind,prompt=productionStagePrompt(basePrompt,draft.productionStage);
+        if(pluginId&&!registeredPlugin(pluginId)){set({creationError:'创作插件不存在'});return;}
+        const disabled=pluginDeniedReason(outputKind,workspaceOf(draft));
+        if(disabled){set({creationError:disabled});return;}
+        if(taskLimitReached(s.runs,workspaceOf(draft))){set({creationError:'当前空间已达今日 Agent 创作任务上限，请稍后再试或联系管理员调整。'});return;}
         const error=aiResourceError(s,draft.attachmentIds,workspaceOf(draft),draft.reference?.sourceId)||packageDependencyError(s.assets,draft.reference,workspaceOf(draft));
         if(error){set({creationError:error});return;}
         let matched, references;
         try {references=validateReferences(referencesFromPrompt(draft.text,s,workspaceOf(draft),draft.references||[]),s,workspaceOf(draft));matched=selectTaskSkills({accessState:{...s,activeWorkspaceId:workspaceOf(draft)},skills:s.skills,prompt,outputKind,workspaceId:workspaceOf(draft),explicitSkillIds:draft.skillIds});}
         catch(error){set({creationError:error instanceof Error?error.message:'技能暂不可用'});return;}
+        const plugin=registeredPlugin(outputKind);
+        const dispatch=plugin?.startCreation({draft,explicit:Boolean(pluginId),exhibitType:resolveIntent(basePrompt).type})??{status:'running' as const,step:0,outputKind};
         const run = {
+            creationPluginId:plugin?.id,
             productionStage:draft.productionStage||'presales', resourceStrategy:'reuse' as const, explicitSkillIds:[...draft.skillIds], skillSelections:matched.selections,
-            id: uid('run'), references:structuredClone(references), workspaceId:workspaceOf(draft), prompt, model: draft.model, styleId: draft.styleId, skillIds: matched.skillIds, attachmentIds: [...draft.attachmentIds], reference: draft.reference ? structuredClone(draft.reference) : undefined, status: 'running' as const, step: 0, outputKind, createdAt: now()
+            id: uid('run'), references:structuredClone(references), workspaceId:workspaceOf(draft), prompt, model: draft.model, styleId: draft.styleId, skillIds: matched.skillIds, attachmentIds: [...draft.attachmentIds], reference: draft.reference ? structuredClone(draft.reference) : undefined, ...dispatch, createdAt: now(),
         };
+        if(sessionDraft){set({runs:[{...run,draftId:draft.id},...s.runs],creationError:undefined});return run;}
         const next=createDraft({workspaceId:workspaceOf(draft),model:draft.model});
         set({runs:[{...run,draftId:draft.id},...s.runs],drafts:[next,...s.drafts.filter(item=>item.id!==draft.id)],activeDraftId:next.id,creationError:undefined});
         return run;
     },
     updateRun: (id, patch) => set(s => ({ runs: s.runs.map(r => r.id === id && r.status !== 'complete' && workspaceCanEdit(s,workspaceOf(r)) ? {
-            ...r, ...patch, id: r.id, workspaceId:workspaceOf(r), step: Math.max(0, Math.min(5, patch.step ?? r.step))
+            ...r, ...patch, ...(r.creationPluginId?{outputKind:r.creationPluginId,creationPluginId:r.creationPluginId}:{}), id: r.id, workspaceId:workspaceOf(r), step: Math.max(0, Math.min(5, patch.step ?? r.step))
         } : r) })),
     completeRun: id => {
         const state = get(), run = state.runs.find(x => x.id === id);
@@ -296,7 +308,9 @@ export const useStudio = create<StudioStore>()(persist((set, get) => ({
         const resourceError=aiResourceError(state,attachmentIds,workspaceOf(work));
         if(resourceError)return {ok:false,summary:resourceError};
         const attachments = state.assets.filter(asset=>attachmentIds.includes(asset.id) && assetAvailableForAI(asset,workspaceOf(work)));
-        const result = reviseScene(work,prompt,target,attachments);
+        const plugin=registeredPlugin(work.kind),disabled=pluginDeniedReason(work.kind,workspaceOf(work));
+        if(disabled)return {ok:false,summary:disabled};
+        const result = (plugin?.revise||reviseScene)(work,prompt,target,attachments);
         const revised=result.work?adoptWorkResources(result.work,get().assets,workspaceOf(work),get().adoptAsset,true):undefined;
         const revision = work.revision+1;
         const turn:ConversationTurn = {id:uid('turn'),workId,prompt:prompt.trim(),target:{...target},status:result.ok?'applied':'unsupported',summary:result.summary,createdAt:now(),...(result.ok?{before:structuredClone(work),afterRevision:revision}:{}),attachmentIds:attachments.map(asset=>asset.id)};
@@ -392,6 +406,7 @@ export const useStudio = create<StudioStore>()(persist((set, get) => ({
         catch {
         }
         const seed = createInitialData();
+        removeCreationDraftCaches(state);
         set({ ...seed, ...normalizeWorkspaceState(state), resourceSchemaVersion:3,projectSchemaVersion:1,composerSchemaVersion:1, loggedIn: state.loggedIn, assets: [...state.assets.filter(x => x.source === 'uploaded'), ...seed.assets] });
     }
 }), { name: 'zhichuang-studio-v1', version: 1, storage: createJSONStorage(() => typeof localStorage !== 'undefined' ? localStorage : fallback), merge:(persisted,current)=>{
@@ -405,7 +420,8 @@ export const useStudio = create<StudioStore>()(persist((set, get) => ({
     const previousDrafts=Array.isArray(merged.drafts)?merged.drafts:[];
     const drafts=previous.composerSchemaVersion===1?previousDrafts:previousDrafts.filter(draft=>!submittedLegacyDraft(draft,Array.isArray(merged.runs)?merged.runs:[]));
     const session=restoreWorkspaceSession({...merged,drafts},previous);
-    return reconcileWorkOutputs({...merged,...session,conversationTurns:Array.isArray(merged.conversationTurns)?merged.conversationTurns:[]});
+    const creationSessions=Array.isArray(merged.creationSessions)?merged.creationSessions.filter(chat=>chat&&workspaceState.workspaces.some(space=>space.id===chat.workspaceId&&!space.purgedAt)):[];
+    return reconcileWorkOutputs({...merged,...session,creationSessions,conversationTurns:Array.isArray(merged.conversationTurns)?merged.conversationTurns:[]});
 } }));
 
 export function attachAssetToDraft(draftId:string, asset:Asset):void {

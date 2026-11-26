@@ -13,7 +13,7 @@ function xmlText(xml:string){
  if(/<!DOCTYPE|<!ENTITY/i.test(xml))throw new Error('文档含不支持的 XML 声明');
  return xml.split(/<\/(?:\w+:)?p\s*>/).map(paragraph=>[...paragraph.matchAll(/<(?:\w+:)?t(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?t\s*>/g)].map(match=>entities(match[1].replace(/<[^>]*>/g,''))).join('')).filter(Boolean).join('\n');
 }
-function readBoundedEntry(entry:JSZip.JSZipObject,maxBytes:number):Promise<Uint8Array>{
+export function readBoundedEntry(entry:JSZip.JSZipObject,maxBytes:number):Promise<Uint8Array>{
  const stream=(entry as JSZip.JSZipObject & {internalStream:(type:'uint8array')=>JSZip.JSZipStreamHelper<Uint8Array>}).internalStream('uint8array');
  return new Promise((resolve,reject)=>{
   const chunks:Uint8Array[]=[];

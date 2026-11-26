@@ -19,9 +19,14 @@ const bindingMatches=(state:StudioStore,snapshot:Snapshot)=>{
  const binding=state.workspaceKnowledge[snapshot.workspaceId];
  return binding?.demoCatalogId===demoKnowledgeCatalogId&&binding.fieldId===snapshot.fieldId&&binding.revision===snapshot.revision;
 };
+const sessionDraft=(state:StudioStore,id:string)=>state.creationSessions?.find(s=>s.draft.id===id)?.draft;
+function updatedInput(state:StudioStore,id:string,attachmentIds:string[]){
+ const revised={attachmentIds,updatedAt:new Date().toISOString()};
+ return sessionDraft(state,id)?{creationSessions:state.creationSessions?.map(s=>s.draft.id===id?{...s,draft:{...s.draft,...revised}}:s)}:{drafts:state.drafts.map(d=>d.id===id?{...d,...revised}:d)};
+}
 function check(state:StudioStore,snapshot:Snapshot){
- const draft=state.drafts.find(item=>item.id===snapshot.draftId);
- if(!draft||state.activeDraftId!==snapshot.draftId||state.activeWorkspaceId!==snapshot.workspaceId||(draft.workspaceId||'personal')!==snapshot.workspaceId||draft.text!==snapshot.prompt||(state.workspaceActors[snapshot.workspaceId]||'self')!==snapshot.actor||!workspaceCanEdit(state,snapshot.workspaceId)||!bindingMatches(state,snapshot))throw new Error('空间、需求、权限或知识本地场绑定已变化，请在当前空间重新发送。');
+ const owned=sessionDraft(state,snapshot.draftId),draft=owned||state.drafts.find(item=>item.id===snapshot.draftId);
+ if(!draft||(!owned&&state.activeDraftId!==snapshot.draftId)||state.activeWorkspaceId!==snapshot.workspaceId||(draft.workspaceId||'personal')!==snapshot.workspaceId||draft.text!==snapshot.prompt||(state.workspaceActors[snapshot.workspaceId]||'self')!==snapshot.actor||!workspaceCanEdit(state,snapshot.workspaceId)||!bindingMatches(state,snapshot))throw new Error('空间、需求、权限或知识本地场绑定已变化，请在当前空间重新发送。');
  return draft;
 }
 function cleanReferences(state:StudioStore,attachmentIds:string[]){
@@ -44,12 +49,12 @@ export function prepareDemoKnowledge(draftId:string):Promise<Result>{
  const operation=prepare(draftId).finally(()=>pending.delete(draftId));pending.set(draftId,operation);return operation;
 }
 async function prepare(draftId:string):Promise<Result>{
- const state=useStudio.getState(),draft=state.drafts.find(item=>item.id===draftId);
- if(!draft||state.activeDraftId!==draftId||state.activeWorkspaceId!==(draft.workspaceId||'personal')||!workspaceCanEdit(state,draft.workspaceId||'personal'))throw new Error('原创作草稿已关闭或没有编辑权限，请在当前空间重新发送。');
+ const state=useStudio.getState(),owned=sessionDraft(state,draftId),draft=owned||state.drafts.find(item=>item.id===draftId);
+ if(!draft||(!owned&&state.activeDraftId!==draftId)||state.activeWorkspaceId!==(draft.workspaceId||'personal')||!workspaceCanEdit(state,draft.workspaceId||'personal'))throw new Error('原创作草稿已关闭或没有编辑权限，请在当前空间重新发送。');
  const binding=state.workspaceKnowledge[draft.workspaceId||'personal'],preset=matchDemoKnowledgePreset(draft.text);
  if(binding?.demoCatalogId!==demoKnowledgeCatalogId||!preset){
   const ids=cleanReferences(state,draft.attachmentIds);
-  if(ids.length!==draft.attachmentIds.length)useStudio.setState({drafts:state.drafts.map(item=>item.id===draftId?{...item,attachmentIds:ids}:item)});
+  if(ids.length!==draft.attachmentIds.length)useStudio.setState(updatedInput(state,draftId,ids));
   return;
  }
  const snapshot:Snapshot={draftId,workspaceId:draft.workspaceId||'personal',prompt:draft.text,actor:state.workspaceActors[draft.workspaceId||'personal']||'self',fieldId:binding.fieldId,fieldName:binding.fieldName,revision:binding.revision};
@@ -73,7 +78,7 @@ async function prepare(draftId:string):Promise<Result>{
   const skill=findSkill(current,parsed);if(skill?.enabled===false)throw new Error(`配套 Skill「${skill.name}」已停用，请启用后继续。`);
   const saved=skill||prepareSkillSave(current,{...parsed,enabled:true,workspaceId:'personal',source:'builtin',sourcePackage:{...parsed.sourcePackage!,storageKey}});
   const ids=resources.map(asset=>asset.id),assets=[...resources,...current.assets.filter(asset=>!ids.includes(asset.id))];
-  return {assets,skills:skill?current.skills:[saved,...current.skills],drafts:current.drafts.map(item=>item.id===draftId?{...item,attachmentIds:[...new Set([...cleanReferences(current,target.attachmentIds),...ids])],updatedAt:new Date().toISOString()}:item)};
+  return {assets,skills:skill?current.skills:[saved,...current.skills],...updatedInput(current,draftId,[...new Set([...cleanReferences(current,target.attachmentIds),...ids])])};
  });
  return {presetId:preset.id,fileCount:preset.files.length};
 }

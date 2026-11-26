@@ -1,0 +1,54 @@
+import {expect,test} from '@playwright/test';
+test('项目配乐继承到当前节点，节点可独立静音并保存',async({page})=>{
+  await page.goto('/#/login');
+  await page.getByRole('button',{name:'填入',exact:true}).click();
+  await page.getByRole('button',{name:'进入工作台'}).click();
+  await expect(page.getByRole('textbox',{name:'创作需求'})).toBeVisible();
+  await page.evaluate(()=>{
+    const key='zhichuang-studio-v1',record=JSON.parse(localStorage.getItem(key)!);
+    record.state.assets.unshift({id:'test-story-theme',workspaceId:'personal',name:'泰山晨间配乐',kind:'audio',src:'/media/narration.wav',preview:'',description:'配乐',tags:[],source:'uploaded',author:'纪鸣',createdAt:new Date().toISOString()});
+    localStorage.setItem(key,JSON.stringify(record));
+  });
+  await page.reload();await page.goto('/#/dream/work-6');
+  await page.getByRole('button',{name:'选择项目配乐'}).click();
+  const picker=page.getByRole('dialog',{name:'选择项目配乐'});
+  await picker.getByText('泰山晨间配乐',{exact:true}).first().click();
+  await picker.getByRole('button',{name:"使用此素材"}).click();
+  await page.getByRole('slider',{name:'项目配乐音量'}).fill('35');
+  const node=page.locator('.react-flow__node').filter({hasText:'故事开始'}).first();
+  await node.click();
+  await page.getByText('声音与旁白',{exact:true}).click();
+  await expect(page.getByText('项目配乐 · 泰山晨间配乐',{exact:true})).toBeVisible();
+  await page.getByRole('combobox',{name:'节点背景音乐'}).selectOption('off');
+  await page.getByRole('button',{name:'保存',exact:true}).click();
+  await page.reload();await node.click();await page.getByText('声音与旁白',{exact:true}).click();
+  await expect(page.getByRole('combobox',{name:'节点背景音乐'})).toHaveValue('off');
+  await page.goto('/#/preview/work-6');
+  await expect(page.locator('.story-preview-scene')).toBeVisible();
+  await expect(page.getByRole('button',{name:'播放配乐与旁白'})).toHaveCount(0);
+  await page.locator('.story-preview-options button:enabled').first().click();
+  await page.getByRole('button',{name:'播放配乐与旁白'}).click();
+  await expect.poll(()=>page.locator('audio').first().evaluate((a:HTMLAudioElement)=>a.volume)).toBe(.35);
+});
+test('首幕重新开始会从头播放旁白并保留声音开关',async({page})=>{
+  await page.goto('/#/login');
+  await page.getByRole('button',{name:'填入',exact:true}).click();
+  await page.getByRole('button',{name:'进入工作台'}).click();
+  await expect(page).toHaveURL(/#\/$/);
+  await page.evaluate(()=>{
+    const key='zhichuang-studio-v1',record=JSON.parse(localStorage.getItem(key)!);
+    const work=record.state.works.find((w:{id:string})=>w.id==='work-6');
+    const start=work.storyNodes.find((n:{type:string})=>n.type==='start');
+    start.sound={narration:{src:'/media/narration.wav',volume:.8}};
+    localStorage.setItem(key,JSON.stringify(record));
+  });
+  await page.reload();
+  await page.goto('/#/preview/work-6');
+  await page.getByRole('button',{name:'播放配乐与旁白'}).click();
+  const voice=page.locator('audio').last();
+  await expect.poll(()=>voice.evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeGreaterThan(0);
+  await voice.evaluate((a:HTMLAudioElement)=>{a.currentTime=5;});
+  await page.getByRole('button',{name:'重新开始',exact:true}).click();
+  await expect(page.getByRole('button',{name:'关闭配乐与旁白'})).toBeVisible();
+  expect(await voice.evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeLessThan(2);
+});

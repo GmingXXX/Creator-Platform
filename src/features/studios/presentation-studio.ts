@@ -5,7 +5,7 @@ export type PresentationMode='pages'|'narration'|'questions';
 export interface NarrationCue {id:string;nodeId:string;effect:'highlight'|'underline'|'circle'}
 export interface NarrationSentence {id:string;text:string;pause:number;audioUrl?:string;audioText?:string;audioProfileKey?:string;duration?:number;cues:NarrationCue[]}
 export interface PresentationHotspot {id:string;nodeId:string;label:string;action:'question'|'detail'|'page';value:string}
-export interface PresentationPageStudio {sentences:NarrationSentence[];transition:'none'|'fade'|'slide';hotspots:PresentationHotspot[]}
+export interface PresentationPageStudio {sentences:NarrationSentence[];transition:'none'|'fade'|'slide';transitionSeconds?:number;entrance?:'none'|'rise'|'reveal';hotspots:PresentationHotspot[]}
 export interface PresentationStudio {version:1;rate:number;voice?:PresentationVoiceSettings;pages:Record<string,PresentationPageStudio>;qa:{enabled:boolean;scope:'work'|'page';includeReferences:boolean;knowledge?:PresentationKnowledgeReference;extraReference:string;suggestions:string[]}}
 const record=(value:unknown):Record<string,unknown>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
 const text=(value:unknown,max=6000)=>typeof value==='string'?value.slice(0,max):'';
@@ -21,7 +21,7 @@ function pageStudio(page:ScenePage,value:unknown):PresentationPageStudio{
  const available=[...stored];
  const sentences=saved===notes.replace(/\n/g,'')&&stored.length?stored:splitNarration(notes).map((line,index)=>{const found=available.findIndex(s=>s.text===line);if(found>=0)return available.splice(found,1)[0];return parseSentence({text:line},`${page.id}-sentence-${index}-${line.length}`);});
  const nodes=new Set(page.nodes.map(n=>n.id));
- return {sentences:sentences.map(s=>({...s,cues:s.cues.filter(c=>nodes.has(c.nodeId))})),transition:['fade','slide'].includes(String(raw.transition))?raw.transition as 'fade'|'slide':'none',hotspots:Array.isArray(raw.hotspots)?raw.hotspots.slice(0,50).map((v,i):PresentationHotspot=>{const h=record(v);return {id:text(h.id,120)||`${page.id}-hotspot-${i}`,nodeId:text(h.nodeId,120),label:text(h.label,100),action:['detail','page'].includes(String(h.action))?h.action as 'detail'|'page':'question',value:text(h.value,2000)};}).filter(h=>nodes.has(h.nodeId)):[]};
+ return {transitionSeconds:bounded(raw.transitionSeconds,.2,4,.8),entrance:raw.entrance==='rise'||raw.entrance==='reveal'?raw.entrance:'none',sentences:sentences.map(s=>({...s,cues:s.cues.filter(c=>nodes.has(c.nodeId))})),transition:['fade','slide'].includes(String(raw.transition))?raw.transition as 'fade'|'slide':'none',hotspots:Array.isArray(raw.hotspots)?raw.hotspots.slice(0,50).map((v,i):PresentationHotspot=>{const h=record(v);return {id:text(h.id,120)||`${page.id}-hotspot-${i}`,nodeId:text(h.nodeId,120),label:text(h.label,100),action:['detail','page'].includes(String(h.action))?h.action as 'detail'|'page':'question',value:text(h.value,2000)};}).filter(h=>nodes.has(h.nodeId)):[]};
 }
 export function readPresentationStudio(work:Work):PresentationStudio{
  let raw:Record<string,unknown>={};try{raw=record(JSON.parse(work.creationPackage?.params.presentationStudio||'{}'));}catch{/* Legacy works have no studio settings. */}
